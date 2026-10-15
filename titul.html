@@ -6,10 +6,6 @@
     <title>Titul Generatori</title>
     <!-- Подключаем Telegram Web App скрипт -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Подключаем библиотеки для генерации PDF и DOCX -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/docx@7.1.0/build/index.js"></script>
     
     <style>
         :root {
@@ -185,6 +181,13 @@
             font-size: 11px;
             margin-top: 40px;
         }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .card, .header { display: none; }
+            .preview-container { border: none; padding: 0; margin: 0; }
+            .preview-page { border: none; height: 100vh; }
+        }
     </style>
 </head>
 <body>
@@ -283,8 +286,8 @@
     </div>
 
     <!-- Предпросмотр -->
-    <div id="capture" class="preview-container">
-        <div class="preview-page">
+    <div class="preview-container">
+        <div class="preview-page" id="print-area">
             <div>
                 <div id="p-vazirlik" class="preview-top"></div>
                 <br>
@@ -318,7 +321,6 @@
 </div>
 
 <script>
-    // Инициализация Telegram WebApp
     let tg = window.Telegram.WebApp;
     tg.expand();
 
@@ -338,23 +340,62 @@
         document.getElementById('p-yil').innerText = document.getElementById('yil').value;
     }
 
-    // Запуск при загрузке
     updatePreview();
 
+    // Функция генерации PDF через системную печать (работает на всех телефонах)
     function downloadPDF() {
-        const element = document.getElementById('capture');
-        const opt = {
-            margin:       10,
-            filename:     'titul-varagi.pdf',
-            image:        { type: 'jpeg', quality: 0.98 },
-            html2canvas:  { scale: 2 },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        html2pdf().from(element).set(opt).save();
+        window.print();
     }
 
+    // Функция скачивания текста/структуры как Word (HTML-формат с расширением .doc)
     function downloadDOCX() {
-        alert("DOCX yuklab olish funksiyasi tez orada ishga tushadi!");
+        const htmlContent = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Titul</title>
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; text-align: center; font-size: 14pt; line-height: 1.5; }
+                .top { font-weight: bold; text-transform: uppercase; }
+                .middle { margin: 60px 0; }
+                .title { font-size: 18pt; font-weight: bold; margin: 20px 0; text-transform: uppercase; }
+                .footer { margin-top: 100px; display: flex; justify-content: space-between; text-align: left; width: 100%; }
+            </style>
+            </head>
+            <body>
+                <div class="top">${document.getElementById('vazirlik').value}</div><br>
+                <b>${document.getElementById('universitet').value}</b><br>
+                <div>${document.getElementById('fakultet').value}</div>
+                <div>${document.getElementById('kafedra').value}</div>
+                
+                <div class="middle">
+                    <br><br>
+                    <div>${document.getElementById('fan').value} fanidan</div>
+                    <div class="title">${document.getElementById('ishturi').value}</div>
+                    <div>Mavzu: <u>${document.getElementById('mavzu').value}</u></div>
+                </div>
+                
+                <br><br><br>
+                <table width="100%" style="margin-top: 100px; font-size: 14pt;">
+                    <tr>
+                        <td align="left">Bajardi: ${document.getElementById('talaba').value}<br><span style="font-size: 10pt; padding-left: 60px;">(${document.getElementById('guruh').value} guruh)</span></td>
+                        <td align="right">Qabul qildi: ${document.getElementById('ustoz').value}<br><span style="font-size: 10pt; padding-left: 70px;">(${document.getElementById('lavozim').value})</span></td>
+                    </tr>
+                </table>
+                
+                <br><br><br><br>
+                <b>${document.getElementById('shahar').value} — ${document.getElementById('yil').value}</b>
+            </body>
+            </html>
+        `;
+
+        const blob = new Blob(['\ufeff' + htmlContent], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'titul-varagi.doc';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 </script>
 

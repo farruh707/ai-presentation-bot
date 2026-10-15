@@ -1,316 +1,3 @@
-<!DOCTYPE html>
-<html lang="uz">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Titul Generatori</title>
-    <!-- Подключаем Telegram Web App скрипт -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <style>
-        :root {
-            --bg-color: #f4f6f8;
-            --card-bg: #ffffff;
-            --text-color: #222222;
-            --accent-color: #007aff;
-            --border-color: #d1d1d6;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 15px;
-        }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .header-icon {
-            background-color: #1b365d;
-            color: white;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        h2 {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .form-group {
-            margin-bottom: 12px;
-        }
-
-        label {
-            display: block;
-            font-size: 11px;
-            font-weight: 700;
-            color: #1b365d;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        input, select {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box;
-            background-color: #fafafa;
-        }
-
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            background-color: #fff;
-        }
-
-        .row {
-            display: flex;
-            gap: 10px;
-        }
-
-        .row .form-group {
-            flex: 1;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            background: #fff;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            transition: 0.2s;
-        }
-
-        .btn:hover {
-            background: #f0f0f0;
-        }
-
-        .btn-primary {
-            background: #1b365d;
-            color: white;
-            border-color: #1b365d;
-        }
-
-        .btn-primary:hover {
-            background: #132743;
-        }
-
-        .preview-container {
-            background: #fff;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-family: "Times New Roman", Times, serif;
-            font-size: 12px;
-            line-height: 1.4;
-            color: #000;
-            margin-top: 20px;
-        }
-
-        .preview-page {
-            border: 1px solid #000;
-            padding: 25px 15px;
-            min-height: 400px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            text-align: center;
-        }
-
-        .preview-top {
-            font-weight: bold;
-            text-transform: uppercase;
-            font-size: 11px;
-        }
-
-        .preview-middle {
-            margin: 30px 0;
-        }
-
-        .preview-title {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 15px 0;
-            text-transform: uppercase;
-        }
-
-        .preview-footer {
-            display: flex;
-            justify-content: space-between;
-            text-align: left;
-            font-size: 11px;
-            margin-top: 40px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header">
-        <div class="header-icon">T</div>
-        <h2>Titul generatori</h2>
-    </div>
-
-    <div class="card">
-        <div class="form-group">
-            <label>Vazirlik (Ixtiyoriy)</label>
-            <input type="text" id="vazirlik" value="O'ZBEKISTON RESPUBLIKASI OLIY TA'LIM, FAN VA INNOVATSIYALAR VAZIRLIGI" oninput="updatePreview()">
-        </div>
-
-        <div class="form-group">
-            <label>Universitet (Ixtiyoriy)</label>
-            <input type="text" id="universitet" value="Toshkent axborot texnologiyalari universiteti" oninput="updatePreview()">
-        </div>
-
-        <div class="row">
-            <div class="form-group">
-                <label>Fakultet</label>
-                <input type="text" id="fakultet" value="Kompyuter injiniringi fakulteti" oninput="updatePreview()">
-            </div>
-            <div class="form-group">
-                <label>Kafedra</label>
-                <input type="text" id="kafedra" value="Axborot xavfsizligi kafedrasi" oninput="updatePreview()">
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Fan Nomi</label>
-            <input type="text" id="fan" value="Dasturlash asoslari" oninput="updatePreview()">
-        </div>
-
-        <div class="form-group">
-            <label>Ish Turi</label>
-            <select id="ishturi" onchange="updatePreview()">
-                <option value="DIPLOM ISHI">DIPLOM ISHI</option>
-                <option value="KURS ISHI">KURS ISHI</option>
-                <option value="MUSTAQIL ISH">MUSTAQIL ISH</option>
-                <option value="REFERAT">REFERAT</option>
-                <option value="BITIRUV MALAKAVIY ISHI">BITIRUV MALAKAVIY ISHI</option>
-                <option value="LABORATORIYA ISHI">LABORATORIYA ISHI</option>
-                <option value="AMALIYOT HISOBOTI">AMALIYOT HISOBOTI</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Mavzu</label>
-            <input type="text" id="mavzu" value="Sun'iy intellekt" oninput="updatePreview()">
-        </div>
-
-        <div class="row">
-            <div class="form-group">
-                <label>Talaba Ismi</label>
-                <input type="text" id="talaba" value="Aliyev V." oninput="updatePreview()">
-            </div>
-            <div class="form-group">
-                <label>Guruh</label>
-                <input type="text" id="guruh" value="912-21" oninput="updatePreview()">
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="form-group">
-                <label>Ustoz Ismi</label>
-                <input type="text" id="ustoz" value="Karimov B." oninput="updatePreview()">
-            </div>
-            <div class="form-group">
-                <label>Ustoz Lavozimi</label>
-                <input type="text" id="lavozim" value="katta o'qituvchi" oninput="updatePreview()">
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="form-group">
-                <label>Shahar</label>
-                <input type="text" id="shahar" value="Toshkent" oninput="updatePreview()">
-            </div>
-            <div class="form-group">
-                <label>Yil</label>
-                <input type="text" id="yil" value="2026" oninput="updatePreview()">
-            </div>
-        </div>
-    </div>
-
-    <div class="card">
-        <label>Botga yuborish va yuklab olish</label>
-        <div class="btn-group">
-            <button class="btn btn-primary" onclick="generateFile()">📥 Botdan faylni olish</button>
-        </div>
-    </div>
-
-    <!-- Превью листа -->
-    <div class="preview-container">
-        <div class="preview-page">
-            <div>
-                <div id="p-vazirlik" class="preview-top"></div>
-                <br>
-                <div id="p-uni" style="font-weight: bold;"></div>
-                <div id="p-fakultet"></div>
-                <div id="p-kafedra"></div>
-            </div>
-
-            <div class="preview-middle">
-                <div style="font-size: 11px;" id="p-fan-text">... fanidan</div>
-                <div class="preview-title" id="p-ishturi">DIPLOM ISHI</div>
-                <div style="font-size: 11px;">Mavzu: <span id="p-mavzu" style="text-decoration: underline;"></span></div>
-            </div>
-
-            <div class="preview-footer">
-                <div>
-                    Bajardi: <span id="p-talaba"></span><br>
-                    <span style="font-size: 9px; padding-left: 50px;" id="p-guruh"></span>
-                </div>
-                <div>
-                    Qabul qildi: <span id="p-ustoz"></span><br>
-                    <span style="font-size: 9px; padding-left: 60px;" id="p-lavozim"></span>
-                </div>
-            </div>
-
-            <div style="margin-top: 30px; font-weight: bold;">
-                <span id="p-shahar"></span> — <span id="p-yil"></span>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
@@ -333,26 +20,52 @@
 
     updatePreview();
 
-    function generateFile() {
-        const data = {
-            vazirlik: document.getElementById('vazirlik').value,
-            universitet: document.getElementById('universitet').value,
-            fakultet: document.getElementById('fakultet').value,
-            kafedra: document.getElementById('kafedra').value,
-            fan: document.getElementById('fan').value,
-            ishturi: document.getElementById('ishturi').value,
-            mavzu: document.getElementById('mavzu').value,
-            talaba: document.getElementById('talaba').value,
-            guruh: document.getElementById('guruh').value,
-            ustoz: document.getElementById('ustoz').value,
-            lavozim: document.getElementById('lavozim').value,
-            shahar: document.getElementById('shahar').value,
-            yil: document.getElementById('yil').value
-        };
+    function downloadDOCX() {
+        // Формируем чистый HTML-документ в формате Word (.doc)
+        const content = `
+            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+            <head><meta charset='utf-8'><title>Titul</title>
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; text-align: center; font-size: 14pt; line-height: 1.5; }
+                .top { font-weight: bold; text-transform: uppercase; font-size: 12pt; }
+                .middle { margin: 80px 0; }
+                .title { font-size: 18pt; font-weight: bold; margin: 30px 0; text-transform: uppercase; }
+            </style>
+            </head>
+            <body>
+                <div class="top">${document.getElementById('vazirlik').value}</div><br>
+                <b>${document.getElementById('universitet').value}</b><br>
+                <div>${document.getElementById('fakultet').value}</div>
+                <div>${document.getElementById('kafedra').value}</div>
+                
+                <div class="middle">
+                    <br><br>
+                    <div>${document.getElementById('fan').value} fanidan</div>
+                    <div class="title">${document.getElementById('ishturi').value}</div>
+                    <div>Mavzu: <u>${document.getElementById('mavzu').value}</u></div>
+                </div>
+                
+                <table width="100%" style="margin-top: 150px; font-size: 14pt;">
+                    <tr>
+                        <td align="left">Bajardi: ${document.getElementById('talaba').value}<br><span style="font-size: 11pt; padding-left: 60px;">(${document.getElementById('guruh').value} guruh)</span></td>
+                        <td align="right">Qabul qildi: ${document.getElementById('ustoz').value}<br><span style="font-size: 11pt; padding-left: 70px;">(${document.getElementById('lavozim').value})</span></td>
+                    </tr>
+                </table>
+                
+                <br><br><br><br>
+                <b>${document.getElementById('shahar').value} — ${document.getElementById('yil').value}</b>
+            </body>
+            </html>
+        `;
 
-        tg.sendData(JSON.stringify(data));
+        const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'titul_varagi.doc';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 </script>
-
-</body>
-</html>

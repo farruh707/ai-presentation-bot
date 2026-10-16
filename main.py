@@ -380,86 +380,56 @@ async def process_admin_decision(callback: types.CallbackQuery):
 async def handle_web_app_data(message: types.Message):
     user_id = message.from_user.id
     current_balance = user_balances.get(user_id, 3000)
-    cost = 3000  # Har bir taqdimot narxi
+
+    raw_data = message.web_app_data.data
+    try:
+        data = json.loads(raw_data)
+    except Exception:
+        data = {"mavzu": raw_data}
+
+    # Определение тарифа и списание средств
+    tarif = data.get("tarif", "standard")
+    tariff_prices = {
+        "standard": 3000,
+        "premium": 5000,
+        "high_premium": 7000
+    }
+    cost = tariff_prices.get(tarif, 3000)
 
     if current_balance < cost:
         await message.answer(
             f"❌ **Balansingiz yetarli emas!**\n\n"
-            f"Sizning balansingiz: {current_balance} so'm.\n"
-            f"Taqdimot yaratish uchun kamida {cost} so'm kerak.\n\n"
+            f"Siz tanlagan tarif narxi: {cost} so'm.\n"
+            f"Sizning balansingiz: {current_balance} so'm.\n\n"
             f"Balansni to'ldirish uchun /buy buyrug'idan foydalaning.",
             reply_markup=get_main_keyboard(),
             parse_mode="Markdown"
         )
         return
 
-    raw_data = message.web_app_data.data
-    
-    try:
-        data = json.loads(raw_data)
-    except Exception:
-        data = {"mavzu": raw_data}
-
-    if isinstance(data, dict) and data.get("action") == "edit_presentation":
-        # Tahrirlash uchun ham balansdan yechamiz
-        user_balances[user_id] = current_balance - cost
-        
-        slides_data = data.get("slides", [])
-        await message.answer(f"⏳ Tahrirlangan taqdimot tayyorlanmoqda... (-{cost} so'm)", parse_mode="Markdown")
-        try:
-            prs = Presentation()
-            for s_info in slides_data:
-                slide_layout = prs.slide_layouts[1]
-                slide = prs.slides.add_slide(slide_layout)
-                slide.shapes.title.text = s_info.get('title', 'Sarlavha')
-                
-                body_shape = slide.placeholders[1]
-                tf = body_shape.text_frame
-                tf.text = ""
-                
-                content = s_info.get('content', '')
-                for line in content.split('\n'):
-                    p = tf.add_paragraph()
-                    p.text = line
-                    p.level = 0
-                    p.space_after = Pt(10)
-
-            file_stream = io.BytesIO()
-            prs.save(file_stream)
-            file_stream.seek(0)
-
-            input_file = BufferedInputFile(file_stream.getvalue(), filename="tahrirlangan_taqdimot.pptx")
-            await message.answer(
-                f"✅ **Sizning tahrirlangan taqdimotingiz tayyor!**\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: {user_balances[user_id]} so'm",
-                reply_markup=get_main_keyboard(),
-                parse_mode="Markdown"
-            )
-            await message.answer_document(input_file)
-            return
-        except Exception as e:
-            logging.error(f"Error generating edited presentation: {e}")
-            await message.answer("❌ Taqdimotni saqlashda xatolik yuz berdi.", reply_markup=get_main_keyboard())
-            return
-
     topic = data.get('mavzu') or data.get('topic') or data.get('title')
     
     if topic:
-        # Balansdan pulni yechib qolamiz
+        total_requested_slides = int(data.get('sahifalar', 7))
+        # 1 титульный слайд + (total_requested_slides - 1) информационных
+        content_slides_count = max(1, total_requested_slides - 1)
+        
+        muallif = data.get('muallif', 'Farrux')
+        til = data.get('til', "O'zbek tili")
+        
+        # Списание средств
         user_balances[user_id] = current_balance - cost
         
-        num_slides = int(data.get('sahifalar', 7))
-        muallif = data.get('muallif', 'Farrux')
-        
-        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {num_slides} ta slayddan iborat taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
+        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
         try:
             prompt = (
-                f"Siz professional taqdimot yaratuvchisiz. '{topic}' mavzusida o'zbek tilida {num_slides} ta slayddan iborat to'liq tarkib tuzing. "
-                f"Siz aniq {num_slides} ta elementdan iborat JSON massivini qaytarishingiz SHART. "
+                f"Siz professional taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq va atroflica ma'lumot tuzing. "
+                f"Siz FAQAT va FAQAT {content_slides_count} ta elementdan iborat JSON massivini qaytarishingiz SHART. "
+                "Har bir slayd uchun chuqur va mazmunli ma'lumot bering. "
                 "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn yozmang:\n"
                 "[\n"
-                "  {\"title\": \"Slayd sarlavhasi 1\", \"points\": [\"Asosiy ma'lumot 1\", \"Asosiy ma'lumot 2\"]},\n"
-                "  {\"title\": \"Slayd sarlavhasi 2\", \"points\": [\"Asosiy ma'lumot 1\", \"Asosiy ma'lumot 2\"]}\n"
+                "  {\"title\": \"Slayd sarlavhasi 1\", \"points\": [\"Asosiy ma'lumot 1\", \"Asosiy ma'lumot 2\", \"Asosiy ma'lumot 3\"]}\n"
                 "]"
             )
             
@@ -478,11 +448,13 @@ async def handle_web_app_data(message: types.Message):
 
             prs = Presentation()
             
+            # Титульный слайд (Слайд #1)
             slide_layout = prs.slide_layouts[0]
             slide = prs.slides.add_slide(slide_layout)
             slide.shapes.title.text = topic
             slide.placeholders[1].text = f"Tayyorladi: {muallif}"
 
+            # Информационные слайды
             for s_info in slides_data:
                 slide_layout = prs.slide_layouts[1]
                 slide = prs.slides.add_slide(slide_layout)
@@ -507,8 +479,9 @@ async def handle_web_app_data(message: types.Message):
             filename = f"Slayd_{muallif}_{topic[:10]}.pptx".replace(" ", "_")
             input_file = BufferedInputFile(file_stream.getvalue(), filename=filename)
             
+            total_created = len(slides_data) + 1
             await message.answer(
-                f"✅ **Sizning taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n📄 Sahifalar soni: {len(slides_data) + 1}\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
+                f"✅ **Sizning taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n📄 Sahifalar soni: {total_created} ta\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )

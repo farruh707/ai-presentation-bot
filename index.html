@@ -3,177 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Taqdimot Generator</title>
+    <title>AI Taqdimot Yaratuvchi</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: #f4f6f8;
-            --card-bg: #ffffff;
-            --text-color: #222222;
-            --accent-color: #007aff;
-            --border-color: #d1d1d6;
-        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: #f4f6f8;
             margin: 0;
-            padding: 15px;
-        }
-        .container { max-width: 600px; margin: 0 auto; }
-        .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 12px; font-weight: 700; color: #1b365d; margin-bottom: 5px; text-transform: uppercase; }
-        input, select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; background-color: #fafafa; }
-        input:focus, select:focus { outline: none; border-color: var(--accent-color); background-color: #fff; }
-        .btn { width: 100%; padding: 14px; border: none; background: #1b365d; color: white; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; }
-        .btn:hover { background: #132743; }
-        .radio-group { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
-        .radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: normal; text-transform: none; color: #222; cursor: pointer; }
-        
-        /* Стили для выбора шаблонов */
-        .templates-scroll {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 5px;
-            margin-top: 10px;
-        }
-        .template-card {
-            min-width: 120px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            padding: 8px;
-            text-align: center;
-            cursor: pointer;
-            background: #fafafa;
-            transition: 0.2s;
-        }
-        .template-card.selected {
-            border-color: var(--accent-color);
-            background: #eef5ff;
-        }
-        .template-card img {
-            width: 100%;
-            height: 70px;
-            object-fit: cover;
-            border-radius: 4px;
-            margin-bottom: 5px;
-        }
-        .template-card span {
-            font-size: 11px;
-            font-weight: 600;
+            padding: 16px;
             color: #333;
+        }
+
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: 700;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #1e293b;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 15px;
+            box-sizing: border-box;
+            background-color: #f8fafc;
+            color: #0f172a;
+            outline: none;
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: #2563eb;
+            background-color: #fff;
+        }
+
+        .radio-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .radio-card:hover {
+            border-color: #3b82f6;
+        }
+
+        .radio-card input[type="radio"] {
+            margin: 0;
+            width: 18px;
+            height: 18px;
+            accent-color: #2563eb;
+            flex-shrink: 0;
+        }
+
+        .radio-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .radio-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .radio-sub {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            background-color: #1e3a8a;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: background-color 0.2s;
+        }
+
+        .submit-btn:hover {
+            background-color: #1e40af;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="card">
-        <h2>AI orqali prezentatsiya tayyorlash</h2>
-        
-        <div class="form-group">
-            <label>Prezentatsiya qaysi mavzuda bo'lsin?</label>
-            <input type="text" id="mavzu" placeholder="Masalan: Atom yadrosi fizikasi">
-        </div>
-
-        <div class="form-group">
-            <label>Ism yoki familiya (Muallif)</label>
-            <input type="text" id="muallif" placeholder="Farrux">
-        </div>
-
-        <div class="form-group">
-            <label>Tilni tanlang...</label>
-            <select id="til">
-                <option value="uzbek">O'zbek tili</option>
-                <option value="russian">Русский язык</option>
-                <option value="english">English</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Taqdimotning sahifalar sonini kiriting</label>
-            <select id="sahifalar">
-                <option value="5">5 ta sahifa</option>
-                <option value="7" selected>7 ta sahifa</option>
-                <option value="10">10 ta sahifa</option>
-            </select>
-        </div>
-
-        <!-- Выбор шаблона дизайна -->
-        <div class="form-group">
-            <label>Prezentatsiya dizaynini tanlang</label>
-            <div class="templates-scroll">
-                <div class="template-card selected" onclick="selectTemplate(this, 'biome')">
-                    <div style="background:#d4b59d; height:70px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">Biome</div>
-                    <span>Biome-latte</span>
-                </div>
-                <div class="template-card" onclick="selectTemplate(this, 'history')">
-                    <div style="background:#2a52be; height:70px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">History</div>
-                    <span>History-material</span>
-                </div>
-                <div class="template-card" onclick="selectTemplate(this, 'modern')">
-                    <div style="background:#1b365d; height:70px; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:bold;">Modern</div>
-                    <span>Modern-dark</span>
-                </div>
-            </div>
-            <input type="hidden" id="template" value="biome">
-        </div>
+    <div class="form-group">
+        <label>Mavzu yoki matn</label>
+        <input type="text" id="mavzu" placeholder="Taqdimot mavzusini kiriting...">
     </div>
 
-    <div class="card">
+    <div class="form-group">
+        <label>Ism yoki familiya (Muallif)</label>
+        <input type="text" id="muallif" value="Farrux">
+    </div>
+
+    <div class="form-group">
+        <label>Tilni tanlang...</label>
+        <select id="til">
+            <option value="O'zbek tili">O'zbek tili</option>
+            <option value="Rus tili">Rus tili</option>
+            <option value="Ingliz tili">Ingliz tili</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>Taqdimotning sahifalar sonini kiriting</label>
+        <select id="sahifalar">
+            <option value="5">5 ta sahifa</option>
+            <option value="7" selected>7 ta sahifa</option>
+            <option value="10">10 ta sahifa</option>
+            <option value="12">12 ta sahifa</option>
+            <option value="15">15 ta sahifa</option>
+        </select>
+    </div>
+
+    <div class="form-group">
         <label>Tarifni tanlang</label>
-        <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="tarif" value="standart" checked> Standart (3000 so'm)</label>
-            <label class="radio-label"><input type="radio" name="tarif" value="premium"> Premium (5000 so'm)</label>
-            <label class="radio-label"><input type="radio" name="tarif" value="ultra"> Yuqori Sifatli Premium (7000 so'm)</label>
-        </div>
+        
+        <label class="radio-card">
+            <input type="radio" name="tarif" value="standard" checked>
+            <div class="radio-info">
+                <span class="radio-title">Standard (3000 so'm)</span>
+                <span class="radio-sub">Oddiy va tezkor taqdimot</span>
+            </div>
+        </label>
+
+        <label class="radio-card">
+            <input type="radio" name="tarif" value="premium">
+            <div class="radio-info">
+                <span class="radio-title">Premium (5000 so'm)</span>
+                <span class="radio-sub">Chuqurlashtirilgan va sifatli kontent</span>
+            </div>
+        </label>
+
+        <label class="radio-card">
+            <input type="radio" name="tarif" value="high_premium">
+            <div class="radio-info">
+                <span class="radio-title">Yuqori sifatli Premium (7000 so'm)</span>
+                <span class="radio-sub">Maksimal darajada batafsil va mukammal</span>
+            </div>
+        </label>
     </div>
 
-    <div class="card">
+    <div class="form-group">
         <label>Fayl formatini tanlang</label>
-        <div class="radio-group">
-            <label class="radio-label"><input type="radio" name="format" value="pptx" checked> .pptx: Powerpoint</label>
-            <label class="radio-label"><input type="radio" name="format" value="pdf"> .pdf: PDF format</label>
-        </div>
+        
+        <label class="radio-card">
+            <input type="radio" name="format" value="pptx" checked>
+            <div class="radio-info">
+                <span class="radio-title">.pptx</span>
+                <span class="radio-sub">PowerPoint formati</span>
+            </div>
+        </label>
+
+        <label class="radio-card">
+            <input type="radio" name="format" value="pdf">
+            <div class="radio-info">
+                <span class="radio-title">.pdf</span>
+                <span class="radio-sub">PDF hujjati formati</span>
+            </div>
+        </label>
     </div>
 
-    <div class="card">
-        <button class="btn" onclick="sendData()">Submit</button>
-    </div>
+    <button class="submit-btn" onclick="sendData()">Yuborish (Submit)</button>
 </div>
 
 <script>
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    function selectTemplate(element, templateName) {
-        document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
-        element.classList.add('selected');
-        document.getElementById('template').value = templateName;
-    }
-
     function sendData() {
-        let mavzu = document.getElementById('mavzu').value.trim();
+        let mavzu = document.getElementById("mavzu").value.trim();
+        let muallif = document.getElementById("muallif").value.trim();
+        let til = document.getElementById("til").value;
+        let sahifalar = parseInt(document.getElementById("sahifalar").value);
+        let tarif = document.querySelector('input[name="tarif"]:checked').value;
+        let format = document.querySelector('input[name="format"]:checked').value;
+
         if (!mavzu) {
-            alert("Iltimos, prezentatsiya mavzusini kiriting!");
+            alert("Iltimos, taqdimot mavzusini kiriting!");
             return;
         }
 
         let data = {
             mavzu: mavzu,
-            muallif: document.getElementById('muallif').value.trim() || "Farrux",
-            til: document.getElementById('til').value,
-            sahifalar: parseInt(document.getElementById('sahifalar').value),
-            template: document.getElementById('template').value,
-            tarif: document.querySelector('input[name="tarif"]:checked').value,
-            format: document.querySelector('input[name="format"]:checked').value
+            muallif: muallif,
+            til: til,
+            sahifalar: sahifalar,
+            tarif: tarif,
+            format: format
         };
 
         tg.sendData(JSON.stringify(data));
+        tg.close();
     }
 </script>
-
 </body>
 </html>

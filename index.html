@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Taqdimot Generator</title>
-    <!-- Telegram Web App skripti -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
     <style>
         :root {
             --bg-color: #f4f6f8;
@@ -15,7 +13,6 @@
             --accent-color: #007aff;
             --border-color: #d1d1d6;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
@@ -23,117 +20,72 @@
             margin: 0;
             padding: 15px;
         }
-
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .header-icon {
-            background-color: #1b365d;
-            color: white;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        h2 {
-            margin: 0;
-            font-size: 20px;
-        }
-
-        .card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: 700;
-            color: #1b365d;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 14px;
-            box-sizing: border-box;
-            background-color: #fafafa;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            background-color: #fff;
-        }
-
-        .btn-group {
-            margin-top: 20px;
-        }
-
-        .btn {
-            width: 100%;
-            padding: 14px;
-            border: none;
-            background: #1b365d;
-            color: white;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            transition: 0.2s;
-        }
-
-        .btn:hover {
-            background: #132743;
-        }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 12px; font-weight: 700; color: #1b365d; margin-bottom: 5px; text-transform: uppercase; }
+        input, select { width: 100%; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; box-sizing: border-box; background-color: #fafafa; }
+        input:focus, select:focus { outline: none; border-color: var(--accent-color); background-color: #fff; }
+        .btn { width: 100%; padding: 14px; border: none; background: #1b365d; color: white; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; }
+        .btn:hover { background: #132743; }
+        .radio-group { display: flex; flex-direction: column; gap: 8px; margin-top: 5px; }
+        .radio-label { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: normal; text-transform: none; color: #222; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <div class="header-icon">AI</div>
-        <h2>Taqdimot yaratish</h2>
-    </div>
-
     <div class="card">
+        <h2>Al orqali prezentatsiya tayyorlash.</h2>
+        
         <div class="form-group">
-            <label>Taqdimot mavzusini kiriting</label>
-            <input type="text" id="mavzu" placeholder="Masalan: Sun'iy intellekt va kelajak">
+            <label>Prezentatsiya qaysi mavzuda bo'lsin?</label>
+            <input type="text" id="mavzu" placeholder="Masalan: Atom yadrosi fizikasi">
+        </div>
+
+        <div class="form-group">
+            <label>Ism yoki familiya (Muallif)</label>
+            <input type="text" id="muallif" placeholder="Farrux">
+        </div>
+
+        <div class="form-group">
+            <label>Tilni tanlang...</label>
+            <select id="til">
+                <option value="uzbek">O'zbek tili</option>
+                <option value="russian">Русский язык</option>
+                <option value="english">English</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Taqdimotning sahifalar sonini kiriting</label>
+            <select id="sahifalar">
+                <option value="5">5 ta sahifa</option>
+                <option value="7" selected>7 ta sahifa</option>
+                <option value="10">10 ta sahifa</option>
+            </select>
         </div>
     </div>
 
     <div class="card">
-        <div class="btn-group">
-            <button class="btn" onclick="sendPresentationData()">✨ Taqdimotni yaratish</button>
+        <label>Tarifni tanlang</label>
+        <div class="radio-group">
+            <label class="radio-label"><input type="radio" name="tarif" value="standart" checked> Standart (3000 so'm)</label>
+            <label class="radio-label"><input type="radio" name="tarif" value="premium"> Premium (5000 so'm)</label>
+            <label class="radio-label"><input type="radio" name="tarif" value="ultra"> Yuqori Sifatli Premium (7000 so'm)</label>
         </div>
+    </div>
+
+    <div class="card">
+        <label>Fayl formatini tanlang</label>
+        <div class="radio-group">
+            <label class="radio-label"><input type="radio" name="format" value="pptx" checked> .pptx: Powerpoint</label>
+            <label class="radio-label"><input type="radio" name="format" value="pdf"> .pdf: PDF format</label>
+        </div>
+    </div>
+
+    <div class="card">
+        <button class="btn" onclick="sendData()">Submit</button>
     </div>
 </div>
 
@@ -141,19 +93,28 @@
     let tg = window.Telegram.WebApp;
     tg.expand();
 
-    function sendPresentationData() {
-        let mavzuVal = document.getElementById('mavzu').value.trim();
-        
-        if (!mavzuVal) {
-            alert("Iltimos, taqdimot mavzusini kiriting!");
+    function sendData() {
+        let mavzu = document.getElementById('mavzu').value.trim();
+        if (!mavzu) {
+            alert("Iltimos, prezentatsiya mavzusini kiriting!");
             return;
         }
 
+        let tarif = document.querySelector('input[name="tarif"]:checked').value;
+        let format = document.querySelector('input[name="format"]:checked').value;
+        let muallif = document.getElementById('muallif').value.trim() || "Farrux";
+        let sahifalar = document.getElementById('sahifalar').value;
+        let til = document.getElementById('til').value;
+
         let data = {
-            mavzu: mavzuVal
+            mavzu: mavzu,
+            muallif: muallif,
+            til: til,
+            sahifalar: parseInt(sahifalar),
+            tarif: tarif,
+            format: format
         };
 
-        // Ma'lumotlarni botga yuborish va WebApp'ni yopish
         tg.sendData(JSON.stringify(data));
     }
 </script>

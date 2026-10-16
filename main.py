@@ -32,7 +32,7 @@ from aiogram.types import (
     BufferedInputFile
 )
 
-# Импорты для FastAPI веб-сервера (чтобы Render не ругался на порты)
+# Импорты для FastAPI веб-сервера
 from fastapi import FastAPI
 import uvicorn
 from threading import Thread
@@ -427,25 +427,42 @@ async def handle_web_app_data(message: types.Message):
     
     if topic:
         total_requested_slides = int(data.get('sahifalar', 7))
-        content_slides_count = max(1, total_requested_slides - 1)
-        
         muallif = data.get('muallif', 'Farrux')
         til = data.get('til', "O'zbek tili")
         
         # Списание средств
         user_balances[user_id] = current_balance - cost
         
-        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
+        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat akademik taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
         slides_data = []
         try:
+            # Настройка качества в зависимости от тарифа
+            if tarif == "standard":
+                quality_instruction = "Oddiy va tushunarli akademik til, qisqaroq va aniq ma'lumotlar."
+            elif tarif == "premium":
+                quality_instruction = "Chuqurlashtirilgan tahliliy ma'lumotlar, ilmiy yondashuv va kengroq tushuntirishlar."
+            else:  # high_premium
+                quality_instruction = "Maksimal darajada batafsil, yuqori ilmiy darajadagi professional tahlil, boy va keng qamrovli kontent."
+
+            content_slides_count = max(1, total_requested_slides - 2) # Титульный и План займут 2 слайда
+
             prompt = (
-                f"Siz professional taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq va atroficha ma'lumot tuzing. "
-                f"Siz FAQAT va FAQAT {content_slides_count} ta elementdan iborat JSON massivini qaytarishingiz SHART. "
-                "Har bir slayd uchun chuqur va mazmunli ma'lumot bering. "
-                "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn, tushuntirish yoki markdown yozmang:\n"
+                f"Siz professional akademik taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq taqdimot tuzing.\n"
+                f"Sifat darajasi: {quality_instruction}\n\n"
+                "Siz quyidagi qat'iy tuzilishga ega JSON massivini qaytarishingiz SHART:\n"
+                "1-element (2-slayd) QАТ'ИЙ равишда quyidagicha bo'lishi kerak:\n"
+                "- Sarlavhasi (title): 'Reja, Xulosa va Adabiyotlar' (yoki shunga o'xshash akademik sarlavha)\n"
+                "- Nuqtalar (points): \n"
+                "  1. Reja: 3 ta asosiy reja bandi.\n"
+                "  2. Xulosa: Qisqacha ilmiy xulosa.\n"
+                "  3. Foydalanilgan adabiyotlar: 2-3 ta ilmiy manba.\n\n"
+                f"Qolgan {content_slides_count} ta element esa yuqoridagi rejaga muvofiq keyingi slaydlar uchun batafsil matnlar bo'lishi kerak.\n"
+                f"Jami elementlar soni {content_slides_count + 1} ta bo'lishi shart.\n"
+                "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn yozmang:\n"
                 "[\n"
-                "  {\"title\": \"Slayd sarlavhasi\", \"points\": [\"Ma'lumot 1\", \"Ma'lumot 2\", \"Ma'lumot 3\"]}\n"
+                "  {\"title\": \"Reja, Xulosa va Adabiyotlar\", \"points\": [\"1. Reja: ...\", \"2. Xulosa: ...\", \"3. Adabiyotlar: ...\"]},\n"
+                "  {\"title\": \"1-Reja bo'limi sarlavhasi\", \"points\": [\"Batafsil ma'lumot 1\", \"Batafsil ma'lumot 2\"]}\n"
                 "]"
             )
             
@@ -477,20 +494,31 @@ async def handle_web_app_data(message: types.Message):
         try:
             prs = Presentation()
             
-            # Титульный слайд (Слайд #1)
+            # Слайд 1: Титульный
             slide_layout = prs.slide_layouts[0]
             slide = prs.slides.add_slide(slide_layout)
             slide.shapes.title.text = topic
-            slide.placeholders[1].text = f"Tayyorladi: {muallif}"
+            slide.placeholders[1].text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
 
+            # Если JSON пустой, создаем структурированный шаблон автоматически
             if not slides_data:
-                for i in range(1, total_requested_slides):
+                slides_data = [
+                    {
+                        "title": "Reja, Xulosa va Adabiyotlar",
+                        "points": [
+                            "Reja: 1. Mavzuning dolzarbligi; 2. Asosiy tahlil; 3. Yakuniy natijalar.",
+                            "Xulosa: Mavzu bo'yicha umumiy ilmiy xulosalar.",
+                            "Adabiyotlar: O'zbekiston Respublikasi qonunchiligi va ilmiy manbalar."
+                        ]
+                    }
+                ]
+                for i in range(2, total_requested_slides):
                     slides_data.append({
-                        "title": f"Mavzu bo'yicha qism {i}",
-                        "points": [f"{topic} haqida asosiy tushunchalar", f"Muhim jihatlari va tahlili {i}"]
+                        "title": f"{i}-bo'lim: {topic} tahlili",
+                        "points": [f"{topic} bo'yicha ilmiy yondashuvlar", f"Amaliy ahamiyati va tahlili {i}"]
                     })
 
-            # Информационные слайды
+            # Добавляем слайды в презентацию
             for s_info in slides_data:
                 slide_layout = prs.slide_layouts[1]
                 slide = prs.slides.add_slide(slide_layout)
@@ -506,7 +534,7 @@ async def handle_web_app_data(message: types.Message):
                     p = tf.add_paragraph()
                     p.text = point
                     p.level = 0
-                    p.space_after = Pt(10)
+                    p.space_after = Pt(8)
 
             file_stream = io.BytesIO()
             prs.save(file_stream)
@@ -517,7 +545,7 @@ async def handle_web_app_data(message: types.Message):
             
             total_created = len(slides_data) + 1
             await message.answer(
-                f"✅ **Sizning taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n📄 Sahifalar soni: {total_created} ta\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
+                f"✅ **Akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n📄 Sahifalar soni: {total_created} ta\n💳 Qoldiq balans: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )
@@ -535,7 +563,7 @@ async def handle_other_text(message: types.Message):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    # Запускаем FastAPI в отдельном потоке, чтобы Render видел открытый порт
+    # Запускаем FastAPI в отдельном потоке
     server_thread = Thread(target=run_fastapi, daemon=True)
     server_thread.start()
     

@@ -32,6 +32,11 @@ from aiogram.types import (
     BufferedInputFile
 )
 
+# Импорты для FastAPI веб-сервера (чтобы Render не ругался на порты)
+from fastapi import FastAPI
+import uvicorn
+from threading import Thread
+
 BOT_TOKEN = "8801689561:AAFgWYikHCNmJwrAM8RfZELM36laUyU4Prc"
 GEMINI_API_KEY = "AQ.Ab8RN6IVvQz8x1XDCPWPFTy0SrcKpDEosTp9VTLKOMVpqs_qRQ"
 ADMIN_ID = 762012445                  
@@ -39,6 +44,17 @@ ADMIN_ID = 762012445
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Настройка FastAPI приложения для Render
+app = FastAPI()
+
+@app.get("/")
+def index():
+    return {"status": "Bot is running online!"}
+
+def run_fastapi():
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 user_balances = {}
 waiting_for_receipt = set()
@@ -519,7 +535,11 @@ async def handle_other_text(message: types.Message):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    print("Bot muvaffaqiyatli ishga tushdi!")
+    # Запускаем FastAPI в отдельном потоке, чтобы Render видел открытый порт
+    server_thread = Thread(target=run_fastapi, daemon=True)
+    server_thread.start()
+    
+    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi!")
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 

@@ -4,7 +4,7 @@ import json
 import html
 import io
 import zipfile
-import comtypes.client
+#import comtypes.client
 from google import genai
 from pptx import Presentation
 from pptx.util import Pt

@@ -5,4 +5,3 @@ python-docx
 Pillow
 fastapi
 uvicorn
-pydantic-core --only-binary=:all:

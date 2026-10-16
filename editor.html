@@ -14,46 +14,63 @@
             color: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
+        .scrollbar-none::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 <body class="flex flex-col h-screen justify-between p-4">
 
-    <!-- Yuqori qism: Sarlavha va slayidlar raqami -->
+    <!-- Yuqori qism: Sarlavha, masshtab va slayidlar raqami -->
     <div>
-        <div class="flex justify-between items-center mb-3">
-            <h1 class="text-lg font-semibold text-slate-100">Taqdimot muharriri</h1>
-            <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1 rounded-lg text-sm text-slate-300">
-                <span>100%</span>
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-base font-semibold text-slate-100">Taqdimot muharriri</h1>
+            <div class="flex items-center space-x-2 bg-slate-800 px-2.5 py-1 rounded-lg text-xs text-slate-300">
+                <button onclick="zoomOut()" class="px-1 text-slate-400 hover:text-white">-</button>
+                <span id="zoom-level">100%</span>
+                <button onclick="zoomIn()" class="px-1 text-slate-400 hover:text-white">+</button>
             </div>
         </div>
-        <p id="slide-info" class="text-xs text-slate-400 mb-3">Slayd 1 / 11</p>
+        <p id="slide-info" class="text-xs text-slate-400 mb-2">Slayd 1 / 1</p>
 
         <!-- Slaydlar raqamlari paneli (Pagination) -->
         <div id="slides-pagination" class="flex space-x-2 overflow-x-auto pb-2 scrollbar-none">
-            <!-- JavaScript orqali dinamik to'ldiriladi -->
+            <!-- Dinamik ravishda to'ldiriladi -->
         </div>
     </div>
 
-    <!-- Markaziy qism: Slayd oynasi / muharrir maydoni -->
-    <div class="flex-grow flex flex-col justify-center items-center my-4">
-        <div id="slide-container" class="w-full max-w-xl bg-white text-slate-900 rounded-xl shadow-2xl p-6 flex flex-col justify-between relative aspect-[16/9] transition-all duration-300">
-            <div>
-                <h2 id="slide-title" contenteditable="true" class="text-xl font-bold border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1 mb-3">
-                    Anatomiya nervnoy sistemi
-                </h2>
-                <p id="slide-content" contenteditable="true" class="text-sm text-slate-600 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1">
-                    Obshaya anatomiya, spinnoy mozg i vozrastnyye osobennosti
-                </p>
+    <!-- Markaziy qism: Slayd oynasi (Rasm va elementlar bilan) -->
+    <div class="flex-grow flex flex-col justify-center items-center my-2 overflow-auto">
+        <div id="slide-container" class="w-full max-w-xl bg-white text-slate-900 rounded-xl shadow-2xl p-4 flex flex-col justify-between relative aspect-[16/9] transition-all duration-300">
+            <!-- Slayd foni yoki rasm -->
+            <div id="slide-background" class="absolute inset-0 rounded-xl overflow-hidden flex items-center justify-center bg-slate-100">
+                <img id="slide-image" src="" alt="Slayd rasmi" class="w-full h-full object-contain hidden">
+                <div id="slide-placeholder-text" class="text-slate-400 text-sm">Slayd muhiti tayyor</div>
             </div>
-            <div class="flex justify-end items-center text-xs text-slate-400">
-                <span>AI Slayd Master</span>
+
+            <!-- Matn va elementlar qatlami -->
+            <div class="relative z-10 flex flex-col justify-between h-full p-2 pointer-events-none">
+                <div class="pointer-events-auto">
+                    <h2 id="slide-title" contenteditable="true" class="text-lg font-bold bg-white/80 backdrop-blur-sm p-1.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-500 outline-none mb-2">
+                        Anatomiya nervnoy sistemi
+                    </h2>
+                </div>
+                <div class="pointer-events-auto">
+                    <p id="slide-content" contenteditable="true" class="text-xs text-slate-700 bg-white/80 backdrop-blur-sm p-1.5 rounded border border-transparent hover:border-slate-300 focus:border-blue-500 outline-none">
+                        Obshaya anatomiya, spinnoy mozg i vozrastnyye osobennosti
+                    </p>
+                </div>
+            </div>
+            
+            <div class="absolute bottom-2 right-3 z-10 text-[10px] text-slate-400 bg-white/70 px-1.5 py-0.5 rounded">
+                AI Slayd Master
             </div>
         </div>
     </div>
 
     <!-- Pastki boshqaruv paneli -->
     <div class="space-y-3">
-        <!-- Amallar tugmalari (Matn va Rasm qo'shish) -->
+        <!-- Amallar tugmalari (+ Matn va Rasm qo'shish) -->
         <div class="grid grid-cols-2 gap-3">
             <button onclick="addTextField()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm shadow-md">
                 <span>+ Matn</span>
@@ -63,40 +80,51 @@
             </button>
         </div>
 
-        <!-- Saqlash va yuborish asosiy tugmasi -->
+        <!-- Saqlash va yuborish tugmasi -->
         <button onclick="saveAndSend()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-4 px-6 rounded-2xl transition shadow-lg flex items-center justify-center space-x-2">
             <span>💾 Saqlash va yuborish</span>
         </button>
     </div>
 
     <script>
-        // Telegram WebApp ni ishga tushirish
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        // Namuna uchun slaydlar ma'lumoti (kelgusida botdan keladigan ma'lumotlar bilan bog'lanadi)
+        let currentZoom = 100;
         let slides = [
-            { title: "Anatomiya nervnoy sistemi", content: "Obshaya anatomiya, spinnoy mozg i vozrastnyye osobennosti" },
-            { title: "Spiyno-mozgovыe nervы", content: "Stroenie, funktsii i topografiya." },
-            { title: "Golovnoy mozg", content: "Osnovnye otdely i ikh znachenie." },
-            { title: "Perifericheskaya nervnaya sistema", content: "Nervnye uzly i chuvstvitelnye okonchaniya." },
-            { title: "Vegetativnaya nervnaya sistema", content: "Simpaticheskiy i parasimpaticheskiy otdely." },
-            { title: "Reflektornaya duga", content: "Komponenty i vidy refleksov." },
-            { title: "Vozrastnye izmeneniya", content: "Osobennosti nervnoy sistemy u detey i pozhilykh." },
-            { title: "Metody issledovaniya", content: "MRT, KT, elektroensefalografiya." },
-            { title: "Patologii i travmy", content: "Osnovnye zabolevaniya i travmy nervnoy sistemy." },
-            { title: "Reabilitatsiya", content: "Metody vosstanovleniya posle travm." },
-            { title: "Zaklyuchenie", content: "Itogi izucheniya nervnoy sistemy." }
+            { title: "Anatomiya nervnoy sistemi", content: "Obshaya anatomiya, spinnoy mozg i vozrastnyye osobennosti", image: "" },
+            { title: "Spiyno-mozgovыe nervы", content: "Stroenie, funktsii i topografiya.", image: "" }
         ];
-
         let currentSlideIndex = 0;
 
         const paginationContainer = document.getElementById('slides-pagination');
         const slideTitle = document.getElementById('slide-title');
         const slideContent = document.getElementById('slide-content');
         const slideInfo = document.getElementById('slide-info');
+        const slideImage = document.getElementById('slide-image');
+        const placeholderText = document.getElementById('slide-placeholder-text');
+        const slideContainer = document.getElementById('slide-container');
+        const zoomLevelText = document.getElementById('zoom-level');
 
-        // Slaydlar tugmachalarini yaratish
+        function zoomIn() {
+            if (currentZoom < 150) {
+                currentZoom += 10;
+                updateZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (currentZoom > 70) {
+                currentZoom -= 10;
+                updateZoom();
+            }
+        }
+
+        function updateZoom() {
+            zoomLevelText.innerText = currentZoom + '%';
+            slideContainer.style.transform = `scale(${currentZoom / 100})`;
+        }
+
         function renderPagination() {
             paginationContainer.innerHTML = '';
             slides.forEach((slide, index) => {
@@ -108,9 +136,7 @@
             });
         }
 
-        // Boshqa slaydga o'tish
         function switchSlide(index) {
-            // Hozirgi slayd ma'lumotlarini saqlab qolish
             slides[currentSlideIndex].title = slideTitle.innerText;
             slides[currentSlideIndex].content = slideContent.innerText;
 
@@ -118,23 +144,45 @@
             slideTitle.innerText = slides[currentSlideIndex].title;
             slideContent.innerText = slides[currentSlideIndex].content;
             slideInfo.innerText = `Slayd ${currentSlideIndex + 1} / ${slides.length}`;
+
+            if (slides[currentSlideIndex].image) {
+                slideImage.src = slides[currentSlideIndex].image;
+                slideImage.classList.remove('hidden');
+                placeholderText.classList.add('hidden');
+            } else {
+                slideImage.classList.add('hidden');
+                placeholderText.classList.remove('hidden');
+            }
             
             renderPagination();
         }
 
-        // Yangi matn bloki qo'shish
         function addTextField() {
-            slideContent.innerText += "\n• Yangi band qo'shildi";
+            slideContent.innerText += "\n• Yangi qo'shimcha matn";
         }
 
-        // Rasm qo'shish simulyatsiyasi
+        // Qурилмадан рәсем сайлап слайдка өстәү функциясе
         function addImageField() {
-            alert("Rasm yuklash oynasi ochildi!");
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        slides[currentSlideIndex].image = event.target.result;
+                        slideImage.src = event.target.result;
+                        slideImage.classList.remove('hidden');
+                        placeholderText.classList.add('hidden');
+                    }
+                    reader.readAsDataURL(file);
+                }
+            };
+            input.click();
         }
 
-        // Saqlash va Telegram botga ma'lumotni qaytarish
         function saveAndSend() {
-            // Oxirgi o'zgarishlarni saqlash
             slides[currentSlideIndex].title = slideTitle.innerText;
             slides[currentSlideIndex].content = slideContent.innerText;
 
@@ -143,12 +191,10 @@
                 slides: slides
             });
 
-            // Botga ma'lumotni jo'natish va mini appni yopish
             tg.sendData(updatedData);
             tg.close();
         }
 
-        // Ilk yuklanish
         renderPagination();
     </script>
 </body>

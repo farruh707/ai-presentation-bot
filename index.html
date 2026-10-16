@@ -3,365 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Taqdimot Sozlamalari</title>
-    <!-- Подключаем официальный Telegram Web App скрипт -->
+    <title>AI Taqdimot Generator</title>
+    <!-- Telegram Web App skripti -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
     <style>
         :root {
-            --bg-color: #18222d;
-            --card-bg: #212d3b;
-            --text-color: #ffffff;
-            --text-secondary: #8b96a5;
-            --accent-color: #2481cc;
-            --border-color: #2f3d4c;
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --text-color: #222222;
+            --accent-color: #007aff;
+            --border-color: #d1d1d6;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 16px;
-            padding-bottom: 90px;
+            padding: 15px;
         }
 
-        h2 {
-            font-size: 20px;
-            margin-bottom: 16px;
-            text-align: center;
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
         }
 
-        .section-title {
-            font-size: 15px;
-            font-weight: 600;
-            margin: 20px 0 8px 0;
-            color: var(--text-color);
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
         }
 
-        .hint {
-            font-size: 13px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-            line-height: 1.4;
-        }
-
-        input[type="text"], select {
-            width: 100%;
-            padding: 12px 14px;
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            color: var(--text-color);
-            font-size: 15px;
-            box-sizing: border-box;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-        input[type="text"]:focus, select:focus {
-            border-color: var(--accent-color);
-        }
-
-        /* Горизонтальный скролл для 21 дизайнов */
-        .designs-scroll-container {
-            overflow-x: auto;
-            white-space: nowrap;
-            padding-bottom: 8px;
-            margin-top: 8px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--accent-color) var(--card-bg);
-        }
-
-        .designs-scroll-container::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .designs-scroll-container::-webkit-scrollbar-thumb {
-            background-color: var(--accent-color);
-            border-radius: 3px;
-        }
-
-        .designs-grid-horizontal {
-            display: inline-flex;
-            gap: 12px;
-        }
-
-        .design-card {
-            width: 110px;
-            flex: 0 0 auto;
-            background-color: var(--card-bg);
-            border: 2px solid var(--border-color);
-            border-radius: 12px;
-            padding: 8px;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .design-card.selected {
-            border-color: var(--accent-color);
-            background-color: #1f3144;
-        }
-
-        .design-preview {
-            width: 100%;
-            height: 80px;
-            border-radius: 8px;
+        .header-icon {
+            background-color: #1b365d;
+            color: white;
+            width: 36px;
+            height: 36px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
+            border-radius: 8px;
             font-weight: bold;
-            font-size: 13px;
+            font-size: 18px;
         }
 
-        .design-name {
-            font-size: 11px;
-            margin-top: 6px;
-            color: var(--text-color);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+        h2 {
+            margin: 0;
+            font-size: 20px;
         }
 
-        /* Radio options */
-        .radio-group {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 8px;
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
-        .radio-label {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            background-color: var(--card-bg);
-            padding: 12px;
-            border-radius: 10px;
-            border: 1px solid var(--border-color);
-            cursor: pointer;
+        .form-group {
+            margin-bottom: 15px;
         }
 
-        .radio-label input {
-            margin-top: 3px;
-            accent-color: var(--accent-color);
-        }
-
-        .radio-text b {
+        label {
             display: block;
-            font-size: 14px;
-            margin-bottom: 2px;
-        }
-
-        .radio-text span {
             font-size: 12px;
-            color: var(--text-secondary);
-            line-height: 1.3;
+            font-weight: 700;
+            color: #1b365d;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        /* Кнопка Submit закрепленная внизу */
-        .submit-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background-color: var(--bg-color);
-            padding: 12px 16px;
-            border-top: 1px solid var(--border-color);
-        }
-
-        .submit-btn {
+        input {
             width: 100%;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            box-sizing: border-box;
+            background-color: #fafafa;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            background-color: #fff;
+        }
+
+        .btn-group {
+            margin-top: 20px;
+        }
+
+        .btn {
+            width: 100%;
             padding: 14px;
-            border-radius: 10px;
-            font-size: 16px;
+            border: none;
+            background: #1b365d;
+            color: white;
+            border-radius: 8px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             text-align: center;
+            transition: 0.2s;
         }
 
-        .submit-btn:active {
-            opacity: 0.8;
+        .btn:hover {
+            background: #132743;
         }
     </style>
 </head>
 <body>
 
-    <h2>AI orqali prezentatsiya tayyorlash</h2>
+<div class="container">
+    <div class="header">
+        <div class="header-icon">AI</div>
+        <h2>Taqdimot yaratish</h2>
+    </div>
 
-    <!-- Тема -->
-    <div class="section-title">Prezentatsiya qaysi mavzuda bo'lsin?</div>
-    <div class="hint">Slayd mavzusini to'liq va tushunarli kiriting. Agar mavzuyingiz tushunarsz bo'lsa qo'shimchasiga fan nomini ham kiriting.</div>
-    <input type="text" id="topicInput" placeholder="Masalan: Fotosintez jarayoni...">
-
-    <!-- Автор -->
-    <div class="section-title">Muallif (Ism yoki Familiya)</div>
-    <div class="hint">Ushbu maydonda ism yoki familiyangiz bo'lishi mumkin.</div>
-    <input type="text" id="authorInput" value="Farrux">
-
-    <!-- Язык -->
-    <div class="section-title">Tilni tanlang</div>
-    <select id="langSelect">
-        <option value="uz">O'zbekcha</option>
-        <option value="ru">Русский</option>
-        <option value="en">English</option>
-    </select>
-
-    <!-- Количество слайдов -->
-    <div class="section-title">Taqdimotning sahifalar sonini kiriting</div>
-    <select id="slidesCount">
-        <option value="5">5 ta slayd</option>
-        <option value="10" selected>10 ta slayd</option>
-        <option value="15">15 ta slayd</option>
-        <option value="20">20 ta slayd</option>
-    </select>
-
-    <!-- Выбор дизайна (21 вариант) -->
-    <div class="section-title">Prezentatsiya dizaynini tanlang (21 ta variant)</div>
-    <div class="designs-scroll-container">
-        <div class="designs-grid-horizontal" id="designGrid">
-            <!-- Дизайны добавятся автоматически через скрипт -->
+    <div class="card">
+        <div class="form-group">
+            <label>Taqdimot mavzusini kiriting</label>
+            <input type="text" id="mavzu" placeholder="Masalan: Sun'iy intellekt va kelajak">
         </div>
     </div>
 
-    <!-- Выбор картинок -->
-    <div class="section-title">🖼 Rasm tanlash usulini belgilang</div>
-    <div class="radio-group">
-        <label class="radio-label">
-            <input type="radio" name="imageMode" value="auto" checked>
-            <div class="radio-text">
-                <b>1. Avtomatik Rasmli</b>
-                <span>AI avtomatik ravishda mavzuga mos rasmlarni internetdan topib qo'shadi</span>
-            </div>
-        </label>
-        <label class="radio-label">
-            <input type="radio" name="imageMode" value="upload">
-            <div class="radio-text">
-                <b>2. Rasmlarni yuklayman</b>
-                <span>O'zingizning rasmlaringizni yuklang (kamida 3 ta)</span>
-            </div>
-        </label>
+    <div class="card">
+        <div class="btn-group">
+            <button class="btn" onclick="sendPresentationData()">✨ Taqdimotni yaratish</button>
+        </div>
     </div>
+</div>
 
-    <!-- Выбор тарифа -->
-    <div class="section-title">⭐ O'zingizga mos tarifni tanlang</div>
-    <div class="radio-group">
-        <label class="radio-label">
-            <input type="radio" name="tariff" value="standart" checked>
-            <div class="radio-text">
-                <b>Standart : 3000 so'm</b>
-                <span>2024-yilgacha bo'lgan internet ma'lumotlari asosida. Ilmiy ma'lumotlar ko'p bo'lmagan mavzular uchun.</span>
-            </div>
-        </label>
-        <label class="radio-label">
-            <input type="radio" name="tariff" value="premium">
-            <div class="radio-text">
-                <b>⭐ Premium : 5000 so'm</b>
-                <span>Matn sifati yaxshilangan, 2025-yilgacha bo'lgan internet ma'lumotlari asosida.</span>
-            </div>
-        </label>
-        <label class="radio-label">
-            <input type="radio" name="tariff" value="high-premium">
-            <div class="radio-text">
-                <b>⭐⭐⭐ Yuqori Sifatli Premium : 7000 so'm</b>
-                <span>Eng kuchli model bo'lib, ilmiy kitoblar va manbalar asosidagi tarif.</span>
-            </div>
-        </label>
-    </div>
+<script>
+    let tg = window.Telegram.WebApp;
+    tg.expand();
 
-    <!-- Выбор формата файла -->
-    <div class="section-title">📂 Fayl formatini tanlang</div>
-    <div class="radio-group">
-        <label class="radio-label">
-            <input type="radio" name="fileFormat" value="pptx" checked>
-            <div class="radio-text"><b>.pptx</b> : Powerpoint</div>
-        </label>
-        <label class="radio-label">
-            <input type="radio" name="fileFormat" value="pdf">
-            <div class="radio-text"><b>.pdf</b> : PDF hujjati</div>
-        </label>
-    </div>
-
-    <!-- Кнопка отправки -->
-    <div class="submit-container">
-        <button class="submit-btn" onclick="submitData()">Submit</button>
-    </div>
-
-    <script>
-        let tg = window.Telegram.WebApp;
-        tg.expand(); // Растягиваем приложение на весь экран
-
-        // Список всех 21 дизайнов
-        const designs = [
-            { id: "biome-latte", name: "Biome-latte", color: "#d2b48c" },
-            { id: "history-material", name: "History-material", color: "#4169e1" },
-            { id: "minimal-dark", name: "Minimal-dark", color: "#222222" },
-            { id: "tech-blue", name: "Tech-blue", color: "#0056b3" },
-            { id: "classic-academic", name: "Academic Classic", color: "#556b2f" },
-            { id: "modern-corporate", name: "Modern Corporate", color: "#483d8b" },
-            { id: "eco-green", name: "Eco Green", color: "#2e8b57" },
-            { id: "creative-purple", name: "Creative Purple", color: "#6a5acd" },
-            { id: "gold-luxury", name: "Gold Luxury", color: "#b8860b" },
-            { id: "cyber-neon", name: "Cyber Neon", color: "#008b8b" },
-            { id: "sunset-orange", name: "Sunset Orange", color: "#ff8c00" },
-            { id: "crimson-red", name: "Crimson Red", color: "#dc143c" },
-            { id: "teal-fresh", name: "Teal Fresh", color: "#006666" },
-            { id: "slate-gray", name: "Slate Gray", color: "#708090" },
-            { id: "royal-navy", name: "Royal Navy", color: "#191970" },
-            { id: "coffee-brown", name: "Coffee Brown", color: "#8b4513" },
-            { id: "emerald-lux", name: "Emerald Lux", color: "#006400" },
-            { id: "indigo-night", name: "Indigo Night", color: "#4b0082" },
-            { id: "ruby-red", name: "Ruby Red", color: "#8b0000" },
-            { id: "turquoise-sky", name: "Turquoise Sky", color: "#008b8b" },
-            { id: "pastel-pink", name: "Pastel Pink", color: "#db7093" }
-        ];
-
-        let selectedDesignId = designs[0].id;
-
-        // Генерация карточек дизайнов в DOM
-        const grid = document.getElementById('designGrid');
-        designs.forEach((des, index) => {
-            let card = document.createElement('div');
-            card.className = `design-card ${index === 0 ? 'selected' : ''}`;
-            card.onclick = function() {
-                document.querySelectorAll('.design-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                selectedDesignId = des.id;
-            };
-
-            card.innerHTML = `
-                <div class="design-preview" style="background-color: ${des.color};">#${index + 1}</div>
-                <div class="design-name">${des.name}</div>
-            `;
-            grid.appendChild(card);
-        });
-
-        // Функция отправки данных в бот
-        function submitData() {
-            let topic = document.getElementById('topicInput').value.trim();
-            if (!topic) {
-                alert("Iltimos, prezentatsiya mavzusini kiriting!");
-                return;
-            }
-
-            let data = {
-                topic: topic,
-                author: document.getElementById('authorInput').value,
-                lang: document.getElementById('langSelect').value,
-                slides: document.getElementById('slidesCount').value,
-                design: selectedDesignId,
-                imageMode: document.querySelector('input[name="imageMode"]:checked').value,
-                tariff: document.querySelector('input[name="tariff"]:checked').value,
-                fileFormat: document.querySelector('input[name="fileFormat"]:checked').value
-            };
-
-            // Передаем данные боту и закрываем Mini App
-            tg.sendData(JSON.stringify(data));
+    function sendPresentationData() {
+        let mavzuVal = document.getElementById('mavzu').value.trim();
+        
+        if (!mavzuVal) {
+            alert("Iltimos, taqdimot mavzusini kiriting!");
+            return;
         }
-    </script>
+
+        let data = {
+            mavzu: mavzuVal
+        };
+
+        // Ma'lumotlarni botga yuborish va WebApp'ni yopish
+        tg.sendData(JSON.stringify(data));
+    }
+</script>
+
 </body>
 </html>

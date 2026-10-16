@@ -4,7 +4,7 @@ import json
 import html
 import io
 import zipfile
-#import comtypes.client
+import urllib.parse
 from google import genai
 from pptx import Presentation
 from pptx.util import Pt
@@ -15,11 +15,6 @@ from PIL import Image
 # Задаем кодировку UTF-8
 os.environ["PYTHONIOENCODING"] = "utf-8"
 os.environ["LANG"] = "en_US.UTF-8"
-
-if sys.stdout.encoding.lower() != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8')
-if sys.stderr.encoding.lower() != 'utf-8':
-    sys.stderr.reconfigure(encoding='utf-8')
 
 import asyncio
 import logging
@@ -53,7 +48,6 @@ user_pdf_images = {}
 waiting_for_zip_files = set()
 user_zip_files = {}
 
-waiting_for_conv_file = set()
 waiting_for_edit_file = set()
 
 def get_main_keyboard():
@@ -127,7 +121,6 @@ async def cmd_cancel(message: types.Message):
     user_pdf_images.pop(message.from_user.id, None)
     waiting_for_zip_files.discard(message.from_user.id)
     user_zip_files.pop(message.from_user.id, None)
-    waiting_for_conv_file.discard(message.from_user.id)
     waiting_for_edit_file.discard(message.from_user.id)
     await message.answer("❌ Amaliyot bekor qilindi.", reply_markup=get_main_keyboard())
 
@@ -187,11 +180,9 @@ async def btn_back(message: types.Message):
     user_pdf_images.pop(message.from_user.id, None)
     waiting_for_zip_files.discard(message.from_user.id)
     user_zip_files.pop(message.from_user.id, None)
-    waiting_for_conv_file.discard(message.from_user.id)
     waiting_for_edit_file.discard(message.from_user.id)
     await message.answer("🏠 Asosiy menyu:", reply_markup=get_main_keyboard())
 
-# --- PDF YARATISH ---
 @dp.message(F.text == "PDF yaratish 📕")
 async def btn_pdf_start(message: types.Message):
     waiting_for_pdf_photos.add(message.from_user.id)
@@ -245,7 +236,6 @@ async def generate_pdf_from_images(message: types.Message):
     waiting_for_pdf_photos.discard(user_id)
     user_pdf_images.pop(user_id, None)
 
-# --- FAYLLARNI ZIP QILISH ---
 @dp.message(F.text == "Fayllarni zip qilish 🗂")
 async def btn_zip_start(message: types.Message):
     waiting_for_zip_files.add(message.from_user.id)
@@ -288,17 +278,10 @@ async def generate_zip_archive(message: types.Message):
     waiting_for_zip_files.discard(user_id)
     user_zip_files.pop(user_id, None)
 
-# --- PPTX ➔ PDF KONVERTATSIYA ---
 @dp.message(F.text == "pptx ➔ pdf")
 async def btn_conv_start(message: types.Message):
-    waiting_for_conv_file.add(message.from_user.id)
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="🔙 Ortga qaytish")]],
-        resize_keyboard=True
-    )
-    await message.answer("📤 Iltimos, PDF formatiga o'tkazish uchun **.pptx** (PowerPoint) faylini yuboring:", reply_markup=keyboard, parse_mode="Markdown")
+    await message.answer("⚠️ Ushbu funksiya hozirda serverda vaqtincha o'chirilgan.", reply_markup=get_main_keyboard())
 
-# --- SLAYDNI TAHRIRLASH 🛠 ---
 @dp.message(F.text == "Slaydni tahrirlash 🛠")
 async def btn_edit_slide_start(message: types.Message):
     waiting_for_edit_file.add(message.from_user.id)
@@ -308,19 +291,22 @@ async def btn_edit_slide_start(message: types.Message):
     )
     await message.answer("📎 Tahrirlash uchun **.pptx** faylni yuboring:", reply_markup=keyboard, parse_mode="Markdown")
 
-
-# --- FAYLLAR VA RASMLARNI QABUL QILISH ---
 @dp.message(F.photo | F.document)
 async def handle_incoming_files(message: types.Message):
     user = message.from_user
     
-    # 1. Chek yuborish
     if user.id in waiting_for_receipt:
         waiting_for_receipt.discard(user.id)
         admin_caption = f"📥 <b>Yangi to'lov cheki keldi!</b>\n👤 Foydalanuvchi: {html.escape(user.full_name)} (ID: <code>{user.id}</code>)"
+        
+        # Кнопки выбора суммы для администратора (3000, 5000, 7000)
         admin_keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="✅ Tasdiqlash (+5000 so'm)", callback_data=f"accept_{user.id}_5000")]
+                [
+                    InlineKeyboardButton(text="3000 so'm", callback_data=f"accept_{user.id}_3000"),
+                    InlineKeyboardButton(text="5000 so'm", callback_data=f"accept_{user.id}_5000"),
+                    InlineKeyboardButton(text="7000 so'm", callback_data=f"accept_{user.id}_7000")
+                ]
             ]
         )
         if message.photo:
@@ -328,7 +314,6 @@ async def handle_incoming_files(message: types.Message):
         await message.answer("✅ Chek adminga yuborildi!", reply_markup=get_main_keyboard())
         return
 
-    # 2. PDF uchun rasmlar
     if user.id in waiting_for_pdf_photos:
         if message.photo:
             photo = message.photo[-1]
@@ -341,7 +326,6 @@ async def handle_incoming_files(message: types.Message):
             await message.answer("⚠️ Iltimos, rasm formatidagi fayl yuboring.")
         return
 
-    # 3. ZIP uchun fayllar
     if user.id in waiting_for_zip_files:
         file_id = message.document.file_id if message.document else message.photo[-1].file_id if message.photo else None
         file_name = message.document.file_name if message.document else "image.jpg"
@@ -354,54 +338,6 @@ async def handle_incoming_files(message: types.Message):
             await message.answer(f"📁 Fayl qo'shildi ({count} ta). Yana fayl yuborishingiz yoki **'✅ Tayyor (ZIP yaratish)'** tugmasini bosing.", parse_mode="Markdown")
         return
 
-    # 4. PPTX ➔ PDF Konvertatsiya
-    if user.id in waiting_for_conv_file:
-        if message.document:
-            file_name = message.document.file_name
-            if not file_name.endswith(('.pptx', '.ppt')):
-                await message.answer("⚠️ Iltimos, faqat .pptx formatidagi taqdimot faylini yuboring.")
-                return
-                
-            file = await bot.get_file(message.document.file_id)
-            f_bytes = await bot.download_file(file.file_path)
-            
-            await message.answer("⏳ Fayl PDF formatiga o'tkazilmoqda...", parse_mode="Markdown")
-            
-            input_path = f"temp_{user.id}_{file_name}"
-            with open(input_path, "wb") as f:
-                f.write(f_bytes.read())
-
-            try:
-                output_filename = file_name.rsplit('.', 1)[0] + ".pdf"
-                output_path = os.path.abspath(f"temp_{user.id}_{output_filename}")
-                abs_input_path = os.path.abspath(input_path)
-
-                powerpoint = comtypes.client.CreateObject("PowerPoint.Application")
-                presentation = powerpoint.Presentations.Open(abs_input_path, WithWindow=False)
-                presentation.SaveAs(output_path, 32)
-                presentation.Close()
-                powerpoint.Quit()
-
-                with open(output_path, "rb") as f_out:
-                    pdf_data = f_out.read()
-                
-                input_file = BufferedInputFile(pdf_data, filename=output_filename)
-                await message.answer_document(input_file, caption="✅ PPTX muvaffaqiyatli PDF ga o'tkazildi!", reply_markup=get_main_keyboard())
-
-                if os.path.exists(output_path):
-                    os.remove(output_path)
-
-            except Exception as e:
-                logging.error(f"Conversion error: {e}")
-                await message.answer("❌ Konvertatsiya qilishda xatolik yuz berdi.", reply_markup=get_main_keyboard())
-            
-            if os.path.exists(input_path):
-                os.remove(input_path)
-                
-        waiting_for_conv_file.discard(user.id)
-        return
-
-    # 5. Slaydni tahrirlash uchun faylni tahlil qilish (Qisqa URL orqali xatolikni oldini olish)
     if user.id in waiting_for_edit_file:
         if message.document:
             file_name = message.document.file_name
@@ -409,39 +345,14 @@ async def handle_incoming_files(message: types.Message):
                 await message.answer("⚠️ Iltimos, faqat .pptx formatidagi taqdimot faylini yuboring.")
                 return
             
-            file = await bot.get_file(message.document.file_id)
-            f_bytes = await bot.download_file(file.file_path)
-            file_content = f_bytes.read()
-            
-            slides_data = []
-            try:
-                prs = Presentation(io.BytesIO(file_content))
-                for idx, slide in enumerate(prs.slides):
-                    title = f"Slayd {idx + 1}"
-                    content = ""
-                    for shape in slide.shapes:
-                        if shape.has_text_frame:
-                            for p in shape.text_frame.paragraphs:
-                                if p.text.strip():
-                                    if not title or title.startswith("Slayd"):
-                                        title = p.text.strip()
-                                    else:
-                                        content += p.text.strip() + "\n"
-                    slides_data.append({"title": title, "content": content.strip()})
-            except Exception as e:
-                logging.error(f"PPTX read error: {e}")
-                slides_data = [{"title": "Slayd 1", "content": "Ma'lumotni o'qishda xatolik."}]
-
             waiting_for_edit_file.discard(user.id)
             
-            # URL uzayib ketib xatolik bermasligi uchun qisqa havola va ID ishlatamiz
-            webapp_url = f"https://farruh707.github.io/ai-presentation-bot/editor.html?uid={user.id}&count={len(slides_data)}"
+            webapp_url = "https://farruh707.github.io/ai-presentation-bot/editor.html"
 
             response_text = (
                 f"✅ **Fayl qabul qilindi!**\n\n"
-                f"📄 **Fayl nomi:** {html.escape(file_name)}\n"
-                f"🖼 **Slaydlar soni:** {len(slides_data)}\n\n"
-                f"Tahrirlash uchun quyidagi tugmani bosing:"
+                f"📄 **Fayl nomi:** {html.escape(file_name)}\n\n"
+                f"Muharrirni ochib, **📁 .pptx ochish** tugmasi orqali ushbu faylni tanlang:"
             )
             
             webapp_keyboard = InlineKeyboardMarkup(
@@ -463,7 +374,7 @@ async def process_admin_decision(callback: types.CallbackQuery):
     add_amount = int(data_parts[2])
     user_balances[target_user_id] = user_balances.get(target_user_id, 0) + add_amount
     await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi.")
-    await callback.message.edit_caption(caption=callback.message.caption + "\n\n✅ Tasdiqlandi")
+    await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Tasdiqlandi (+{add_amount} so'm)")
     await callback.answer("Bajarildi!")
 
 @dp.message(F.web_app_data)
@@ -533,7 +444,7 @@ async def handle_web_app_data(message: types.Message):
             )
             
             response = ai_client.models.generate_content(
-                model='gemini-3.8-flash',
+                model='gemini-2.5-flash',
                 contents=prompt,
             )
             
@@ -596,79 +507,6 @@ async def handle_web_app_data(message: types.Message):
             file_stream.seek(0)
             await message.answer_document(BufferedInputFile(file_stream.getvalue(), filename="taqdimot.pptx"))
             return
-
-    if 'vazirlik' in data or 'universitet' in data:
-        try:
-            doc = Document()
-            for section in doc.sections:
-                section.top_margin = Inches(1.0)
-                section.bottom_margin = Inches(1.0)
-                section.left_margin = Inches(1.5)
-                section.right_margin = Inches(1.0)
-
-            def add_center_p(text, size=14, bold=False):
-                p = doc.add_paragraph()
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = p.add_run(text)
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(size)
-                run.bold = bold
-                return p
-
-            add_center_p(data.get('vazirlik', ''), size=12, bold=True)
-            doc.add_paragraph()
-            add_center_p(data.get('universitet', ''), size=14, bold=True)
-            add_center_p(data.get('fakultet', ''), size=12)
-            add_center_p(data.get('kafedra', ''), size=12)
-            
-            for _ in range(3): doc.add_paragraph()
-            
-            add_center_p(f"{data.get('fan', '')} fanidan", size=12)
-            add_center_p(data.get('ishturi', 'DIPLOM ISHI'), size=16, bold=True)
-            
-            p_mavzu = doc.add_paragraph()
-            p_mavzu.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run_m = p_mavzu.add_run(f"Mavzu: {data.get('mavzu', '')}")
-            run_m.font.name = 'Times New Roman'
-            run_m.font.size = Pt(14)
-            run_m.underline = True
-
-            for _ in range(4): doc.add_paragraph()
-
-            table = doc.add_table(rows=1, cols=2)
-            table.autofit = False
-            table.columns[0].width = Inches(3.0)
-            table.columns[1].width = Inches(3.0)
-            
-            cell_left = table.cell(0, 0)
-            cell_right = table.cell(0, 1)
-            
-            cell_left.text = f"Bajardi: {data.get('talaba', '')}\n({data.get('guruh', '')} guruh)"
-            cell_right.text = f"Qabul qildi: {data.get('ustoz', '')}\n({data.get('lavozim', '')})"
-            
-            for p in cell_left.paragraphs:
-                p.runs[0].font.name = 'Times New Roman'
-                p.runs[0].font.size = Pt(12)
-            for p in cell_right.paragraphs:
-                p.runs[0].font.name = 'Times New Roman'
-                p.runs[0].font.size = Pt(12)
-
-            for _ in range(3): doc.add_paragraph()
-            add_center_p(f"{data.get('shahar', 'Toshkent')} — {data.get('yil', '2026')}", size=14, bold=True)
-
-            file_stream = io.BytesIO()
-            doc.save(file_stream)
-            file_stream.seek(0)
-
-            await message.answer(
-                "✅ **Sizning titul varag'ingiz tayyor!**",
-                reply_markup=get_main_keyboard(),
-                parse_mode="Markdown"
-            )
-            await message.answer_document(BufferedInputFile(file_stream.getvalue(), filename="titul_varagi.docx"))
-        except Exception as e:
-            logging.error(f"Error handling titul: {e}")
-            await message.answer("❌ Xatolik yuz berdi.", reply_markup=get_main_keyword())
 
 @dp.message(F.text)
 async def handle_other_text(message: types.Message):

@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Taqdimot muharriri</title>
-    <!-- Telegram Web App kutubxonasi -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -21,7 +19,6 @@
 </head>
 <body class="flex flex-col h-screen justify-between p-4">
 
-    <!-- Yuqori qism: Sarlavha, masshtab va slayidlar raqami -->
     <div>
         <div class="flex justify-between items-center mb-2">
             <h1 class="text-base font-semibold text-slate-100">Taqdimot muharriri</h1>
@@ -31,21 +28,19 @@
                 <button onclick="zoomIn()" class="px-1 text-slate-400 hover:text-white font-bold">+</button>
             </div>
         </div>
-        <p id="slide-info" class="text-xs text-slate-400 mb-2">Slayd 1 / 11</p>
+        <p id="slide-info" class="text-xs text-slate-400 mb-2">Slayd 1 / 1</p>
 
-        <!-- Slaydlar raqamlari paneli (Pagination) -->
+        <!-- Slaydlar raqamlari paneli -->
         <div id="slides-pagination" class="flex space-x-2 overflow-x-auto pb-2 scrollbar-none">
-            <!-- Dinamik ravishda to'ldiriladi (1 dan 11 gacha va hokazo) -->
+            <!-- Dinamik to'ldiriladi -->
         </div>
     </div>
 
-    <!-- Markaziy qism: Slayd oynasi (Rasm va matnlar bilan) -->
+    <!-- Markaziy qism -->
     <div class="flex-grow flex flex-col justify-center items-center my-2 overflow-auto">
         <div id="slide-container" class="w-full max-w-xl bg-white text-slate-900 rounded-xl shadow-2xl p-5 flex flex-col justify-between relative aspect-[16/9] transition-transform duration-300 origin-center">
             
-            <!-- Slayd ichidagi kontent (Chapda rasm, O'ngda matnlar) -->
             <div class="grid grid-cols-2 gap-4 h-full items-center">
-                <!-- Rasm qismi -->
                 <div id="image-dropzone" onclick="addImageField()" class="h-full border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden relative bg-slate-50 hover:bg-slate-100 transition">
                     <img id="slide-image" src="" alt="Rasm yuklash" class="w-full h-full object-contain hidden">
                     <div id="image-placeholder" class="text-center p-2">
@@ -54,14 +49,9 @@
                     </div>
                 </div>
 
-                <!-- Matn qismi -->
                 <div class="flex flex-col justify-center h-full space-y-2">
-                    <h2 id="slide-title" contenteditable="true" class="text-base font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1">
-                        Slayd sarlavhasi
-                    </h2>
-                    <p id="slide-content" contenteditable="true" class="text-xs text-slate-600 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1 leading-relaxed">
-                        Asosiy matn va ma'lumotlar shu yerda bo'ladi...
-                    </p>
+                    <h2 id="slide-title" contenteditable="true" class="text-base font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1"></h2>
+                    <p id="slide-content" contenteditable="true" class="text-xs text-slate-600 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1 leading-relaxed"></p>
                 </div>
             </div>
 
@@ -73,7 +63,6 @@
 
     <!-- Pastki boshqaruv paneli -->
     <div class="space-y-2.5">
-        <!-- Amallar tugmalari -->
         <div class="grid grid-cols-2 gap-3">
             <button onclick="addTextField()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium py-3 px-4 rounded-xl transition flex items-center justify-center space-x-2 text-sm shadow-md">
                 <span>+ Matn</span>
@@ -83,7 +72,6 @@
             </button>
         </div>
 
-        <!-- Saqlash va yuborish tugmasi -->
         <button onclick="saveAndSend()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3.5 px-6 rounded-2xl transition shadow-lg flex items-center justify-center space-x-2 text-sm">
             <span>💾 Saqlash va yuborish</span>
         </button>
@@ -94,21 +82,24 @@
         tg.expand();
 
         let currentZoom = 100;
-        
-        // 11 ta namuna slaydlar (skrinshotingizdagi kabi)
-        let slides = [
-            { title: "Anatomiya nervnoy sistemi", content: "Obshaya anatomiya, spinnoy mozg i vozrastnyye osobennosti", image: "" },
-            { title: "Spinno-mozgovye nervy", content: "Stroenie, funktsii i topografiya nervnoy sistemy.", image: "" },
-            { title: "Golovnoy mozg", content: "Osnovnye otdely i ikh funktsionalnoe znachenie.", image: "" },
-            { title: "Perifericheskaya sistema", content: "Nervnye uzly, chuvstvitelnye okonchaniya i svyazi.", image: "" },
-            { title: "Vegetativnaya sistema", content: "Simpaticheskiy i parasimpaticheskiy otdely.", image: "" },
-            { title: "Reflektornaya duga", content: "Komponenty, retseptor, nervnyy tsentr i effektor.", image: "" },
-            { title: "Vozrastnye izmeneniya", content: "Osobennosti razvitiya u detey i pozhilykh lyudey.", image: "" },
-            { title: "Metody issledovaniya", content: "MRT, KT, elektroensefalografiya i DIAGNOSTIKA.", image: "" },
-            { title: "Patologii i travmy", content: "Osnovnye zabolevaniya i travmaticheskie povrezhdeniya.", image: "" },
-            { title: "Reabilitatsiya", content: "Sovremennye metody vosstanovleniya funktsiy.", image: "" },
-            { title: "Zaklyuchenie", content: "Itogi izucheniya i obshchie vyvody po teme.", image: "" }
-        ];
+        let slides = [];
+
+        // URL parametrlaridan bot yuborgan haqiqiy slaydlarni o'qib olish
+        const urlParams = new URLSearchParams(window.location.search);
+        const rawData = urlParams.get('data');
+
+        if (rawData) {
+            try {
+                slides = JSON.parse(decodeURIComponent(rawData));
+            } catch (e) {
+                console.error("JSON parse error", e);
+            }
+        }
+
+        // Agar ma'lumot kelmagan bo'lsa, zaxira uchun 1 ta namuna
+        if (!slides || slides.length === 0) {
+            slides = [{ title: "Taqdimot", content: "Ma'lumot topilmadi" }];
+        }
 
         let currentSlideIndex = 0;
 
@@ -122,17 +113,11 @@
         const zoomLevelText = document.getElementById('zoom-level');
 
         function zoomIn() {
-            if (currentZoom < 140) {
-                currentZoom += 10;
-                updateZoom();
-            }
+            if (currentZoom < 140) { currentZoom += 10; updateZoom(); }
         }
 
         function zoomOut() {
-            if (currentZoom > 70) {
-                currentZoom -= 10;
-                updateZoom();
-            }
+            if (currentZoom > 70) { currentZoom -= 10; updateZoom(); }
         }
 
         function updateZoom() {
@@ -152,16 +137,14 @@
         }
 
         function switchSlide(index) {
-            // Hozirgi slayd ma'lumotlarini saqlab qolish
             slides[currentSlideIndex].title = slideTitle.innerText;
             slides[currentSlideIndex].content = slideContent.innerText;
 
             currentSlideIndex = index;
-            slideTitle.innerText = slides[currentSlideIndex].title;
-            slideContent.innerText = slides[currentSlideIndex].content;
+            slideTitle.innerText = slides[currentSlideIndex].title || "";
+            slideContent.innerText = slides[currentSlideIndex].content || "";
             slideInfo.innerText = `Slayd ${currentSlideIndex + 1} / ${slides.length}`;
 
-            // Rasmni tekshirish
             if (slides[currentSlideIndex].image) {
                 slideImage.src = slides[currentSlideIndex].image;
                 slideImage.classList.remove('hidden');
@@ -175,7 +158,7 @@
         }
 
         function addTextField() {
-            slideContent.innerText += "\n• Yangi qo'shimcha band";
+            slideContent.innerText += "\n• Yangi band";
         }
 
         function addImageField() {
@@ -199,7 +182,6 @@
         }
 
         function saveAndSend() {
-            // Oxirgi o'zgarishlarni yozib olish
             slides[currentSlideIndex].title = slideTitle.innerText;
             slides[currentSlideIndex].content = slideContent.innerText;
 
@@ -212,7 +194,8 @@
             tg.close();
         }
 
-        renderPagination();
+        // Boshlang'ich yuklash
+        switchSlide(0);
     </script>
 </body>
 </html>

@@ -6,52 +6,66 @@
     <title>Taqdimot muharriri</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- JSZip kutubxonasi (.pptx fayllarni brauzerda o'qish uchun) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
             background-color: #0f172a;
             color: #f8fafc;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        .scrollbar-none::-webkit-scrollbar {
-            display: none;
-        }
+        .scrollbar-none::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="flex flex-col h-screen justify-between p-4">
 
+    <!-- Yuqori qism -->
     <div>
         <div class="flex justify-between items-center mb-2">
             <h1 class="text-base font-semibold text-slate-100">Taqdimot muharriri</h1>
-            <div class="flex items-center space-x-2 bg-slate-800 px-2.5 py-1 rounded-lg text-xs text-slate-300">
-                <button onclick="zoomOut()" class="px-1 text-slate-400 hover:text-white font-bold">-</button>
-                <span id="zoom-level">100%</span>
-                <button onclick="zoomIn()" class="px-1 text-slate-400 hover:text-white font-bold">+</button>
+            <div class="flex items-center space-x-2">
+                <!-- PPTX Faylni yuklash tugmasi -->
+                <label class="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold py-1.5 px-3 rounded-lg cursor-pointer transition shadow">
+                    📁 .pptx ochish
+                    <input type="file" id="pptx-file-input" accept=".pptx" class="hidden" onchange="loadPptxFile(event)">
+                </label>
+                <div class="flex items-center space-x-1 bg-slate-800 px-2.5 py-1 rounded-lg text-xs text-slate-300">
+                    <button onclick="zoomOut()" class="px-1 text-slate-400 hover:text-white font-bold">-</button>
+                    <span id="zoom-level">100%</span>
+                    <button onclick="zoomIn()" class="px-1 text-slate-400 hover:text-white font-bold">+</button>
+                </div>
             </div>
         </div>
-        <p id="slide-info" class="text-xs text-slate-400 mb-2">Slayd 1 / 1</p>
+        <p id="slide-info" class="text-xs text-slate-400 mb-2">Slayd 0 / 0 (.pptx faylni yuklang)</p>
 
-        <!-- Slaydlar raqamlari paneli -->
+        <!-- Slaydlar raqamlari paneli (Pagination) -->
         <div id="slides-pagination" class="flex space-x-2 overflow-x-auto pb-2 scrollbar-none">
             <!-- Dinamik to'ldiriladi -->
         </div>
     </div>
 
-    <!-- Markaziy qism -->
+    <!-- Markaziy qism: Slayd oynasi -->
     <div class="flex-grow flex flex-col justify-center items-center my-2 overflow-auto">
         <div id="slide-container" class="w-full max-w-xl bg-white text-slate-900 rounded-xl shadow-2xl p-5 flex flex-col justify-between relative aspect-[16/9] transition-transform duration-300 origin-center">
             
             <div class="grid grid-cols-2 gap-4 h-full items-center">
+                <!-- Rasm qismi -->
                 <div id="image-dropzone" onclick="addImageField()" class="h-full border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer overflow-hidden relative bg-slate-50 hover:bg-slate-100 transition">
-                    <img id="slide-image" src="" alt="Rasm yuklash" class="w-full h-full object-contain hidden">
+                    <img id="slide-image" src="" alt="Rasm" class="w-full h-full object-contain hidden">
                     <div id="image-placeholder" class="text-center p-2">
                         <svg class="w-8 h-8 mx-auto text-slate-400 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                        <span class="text-[10px] text-slate-500 font-medium">Rasm qo'shish uchun bosing</span>
+                        <span class="text-[10px] text-slate-500 font-medium">Rasm qo'shish</span>
                     </div>
                 </div>
 
+                <!-- Matn qismi -->
                 <div class="flex flex-col justify-center h-full space-y-2">
-                    <h2 id="slide-title" contenteditable="true" class="text-base font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1"></h2>
-                    <p id="slide-content" contenteditable="true" class="text-xs text-slate-600 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1 leading-relaxed"></p>
+                    <h2 id="slide-title" contenteditable="true" class="text-base font-bold text-slate-900 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1">
+                        Iltimos, yuqoridan .pptx faylni tanlang
+                    </h2>
+                    <p id="slide-content" contenteditable="true" class="text-xs text-slate-600 border-b border-transparent hover:border-slate-300 focus:border-blue-500 outline-none pb-1 leading-relaxed">
+                        Yoki botdan fayl yuborib qayta kirish mumkin.
+                    </p>
                 </div>
             </div>
 
@@ -83,24 +97,6 @@
 
         let currentZoom = 100;
         let slides = [];
-
-        // URL parametrlaridan bot yuborgan haqiqiy slaydlarni o'qib olish
-        const urlParams = new URLSearchParams(window.location.search);
-        const rawData = urlParams.get('data');
-
-        if (rawData) {
-            try {
-                slides = JSON.parse(decodeURIComponent(rawData));
-            } catch (e) {
-                console.error("JSON parse error", e);
-            }
-        }
-
-        // Agar ma'lumot kelmagan bo'lsa, zaxira uchun 1 ta namuna
-        if (!slides || slides.length === 0) {
-            slides = [{ title: "Taqdimot", content: "Ma'lumot topilmadi" }];
-        }
-
         let currentSlideIndex = 0;
 
         const paginationContainer = document.getElementById('slides-pagination');
@@ -112,14 +108,66 @@
         const slideContainer = document.getElementById('slide-container');
         const zoomLevelText = document.getElementById('zoom-level');
 
-        function zoomIn() {
-            if (currentZoom < 140) { currentZoom += 10; updateZoom(); }
+        // Brauzerda .pptx faylni to'g'ridan-to'g'ri o'qish funksiyasi
+        async function loadPptxFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            slideInfo.innerText = "Yuklanmoqda...";
+            try {
+                const zip = new JSZip();
+                const contents = await zip.loadAsync(file);
+                
+                slides = [];
+                // Slaydlarni qidirish (ppt/slides/slide1.xml, slide2.xml ...)
+                let slideFiles = Object.keys(contents.files).filter(filename => filename.match(/^ppt\/slides\/slide\d+\.xml$/));
+                
+                // Tartib raqami bo'yicha sort qilish
+                slideFiles.sort((a, b) => {
+                    let numA = parseInt(a.match(/slide(\d+)\.xml/)[1]);
+                    let numB = parseInt(b.match(/slide(\d+)\.xml/)[1]);
+                    return numA - numB;
+                });
+
+                for (let i = 0; i < slideFiles.length; i++) {
+                    let slideXml = await contents.files[slideFiles[i]].async("text");
+                    
+                    // XML dan matnlarni <a:t> taglari orqali yig'ib olish
+                    let parser = new DOMParser();
+                    let xmlDoc = parser.parseFromString(slideXml, "text/xml");
+                    let textElements = xmlDoc.getElementsByTagName("a:t");
+                    
+                    let texts = [];
+                    for (let t of textElements) {
+                        if (t.textContent.trim()) {
+                            texts.push(t.textContent.trim());
+                        }
+                    }
+
+                    let title = texts.length > 0 ? texts[0] : `Slayd ${i + 1}`;
+                    let content = texts.length > 1 ? texts.slice(1).join("\n") : "";
+
+                    // Rasmlarni qidirish (agar mavjud bo'lsa)
+                    let imgDataUrl = "";
+                    // PPTX ichidagi media rasmlarini bog'lash mumkin, soddalik uchun hozircha matnlar yuklanadi
+
+                    slides.push({ title: title, content: content, image: imgDataUrl });
+                }
+
+                if (slides.length === 0) {
+                    slides = [{ title: "Slayd topilmadi", content: "Matnlar aniqlanmadi." }];
+                }
+
+                currentSlideIndex = 0;
+                switchSlide(0);
+            } catch (err) {
+                console.error(err);
+                alert("Faylni o'qishda xatolik yuz berdi!");
+            }
         }
 
-        function zoomOut() {
-            if (currentZoom > 70) { currentZoom -= 10; updateZoom(); }
-        }
-
+        function zoomIn() { if (currentZoom < 140) { currentZoom += 10; updateZoom(); } }
+        function zoomOut() { if (currentZoom > 70) { currentZoom -= 10; updateZoom(); } }
         function updateZoom() {
             zoomLevelText.innerText = currentZoom + '%';
             slideContainer.style.transform = `scale(${currentZoom / 100})`;
@@ -137,8 +185,10 @@
         }
 
         function switchSlide(index) {
-            slides[currentSlideIndex].title = slideTitle.innerText;
-            slides[currentSlideIndex].content = slideContent.innerText;
+            if (slides.length > 0) {
+                slides[currentSlideIndex].title = slideTitle.innerText;
+                slides[currentSlideIndex].content = slideContent.innerText;
+            }
 
             currentSlideIndex = index;
             slideTitle.innerText = slides[currentSlideIndex].title || "";
@@ -157,9 +207,7 @@
             renderPagination();
         }
 
-        function addTextField() {
-            slideContent.innerText += "\n• Yangi band";
-        }
+        function addTextField() { slideContent.innerText += "\n• Yangi band"; }
 
         function addImageField() {
             const input = document.createElement('input');
@@ -182,8 +230,10 @@
         }
 
         function saveAndSend() {
-            slides[currentSlideIndex].title = slideTitle.innerText;
-            slides[currentSlideIndex].content = slideContent.innerText;
+            if (slides.length > 0) {
+                slides[currentSlideIndex].title = slideTitle.innerText;
+                slides[currentSlideIndex].content = slideContent.innerText;
+            }
 
             const updatedData = JSON.stringify({
                 action: "edit_presentation",
@@ -193,9 +243,6 @@
             tg.sendData(updatedData);
             tg.close();
         }
-
-        // Boshlang'ich yuklash
-        switchSlide(0);
     </script>
 </body>
 </html>

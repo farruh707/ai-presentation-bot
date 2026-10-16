@@ -411,7 +411,6 @@ async def handle_web_app_data(message: types.Message):
     
     if topic:
         total_requested_slides = int(data.get('sahifalar', 7))
-        # 1 титульный слайд + (total_requested_slides - 1) информационных
         content_slides_count = max(1, total_requested_slides - 1)
         
         muallif = data.get('muallif', 'Farrux')
@@ -422,30 +421,44 @@ async def handle_web_app_data(message: types.Message):
         
         await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
+        slides_data = []
         try:
             prompt = (
-                f"Siz professional taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq va atroflica ma'lumot tuzing. "
+                f"Siz professional taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq va atroficha ma'lumot tuzing. "
                 f"Siz FAQAT va FAQAT {content_slides_count} ta elementdan iborat JSON massivini qaytarishingiz SHART. "
                 "Har bir slayd uchun chuqur va mazmunli ma'lumot bering. "
-                "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn yozmang:\n"
+                "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn, tushuntirish yoki markdown yozmang:\n"
                 "[\n"
-                "  {\"title\": \"Slayd sarlavhasi 1\", \"points\": [\"Asosiy ma'lumot 1\", \"Asosiy ma'lumot 2\", \"Asosiy ma'lumot 3\"]}\n"
+                "  {\"title\": \"Slayd sarlavhasi\", \"points\": [\"Ma'lumot 1\", \"Ma'lumot 2\", \"Ma'lumot 3\"]}\n"
                 "]"
             )
             
             response = ai_client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt,
+                config={
+                    "response_mime_type": "application/json"
+                }
             )
             
             clean_text = response.text.strip()
-            if clean_text.startswith("```json"):
-                clean_text = clean_text[7:-3].strip()
-            elif clean_text.startswith("```"):
-                clean_text = clean_text[3:-3].strip()
+            if "```json" in clean_text:
+                clean_text = clean_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in clean_text:
+                clean_text = clean_text.split("```")[1].split("```")[0].strip()
                 
+            json_start = clean_text.find('[')
+            json_end = clean_text.rfind(']')
+            if json_start != -1 and json_end != -1:
+                clean_text = clean_text[json_start:json_end+1]
+
             slides_data = json.loads(clean_text)
 
+        except Exception as e:
+            logging.error(f"JSON parsing or AI error: {e}")
+            slides_data = []
+
+        try:
             prs = Presentation()
             
             # Титульный слайд (Слайд #1)
@@ -453,6 +466,13 @@ async def handle_web_app_data(message: types.Message):
             slide = prs.slides.add_slide(slide_layout)
             slide.shapes.title.text = topic
             slide.placeholders[1].text = f"Tayyorladi: {muallif}"
+
+            if not slides_data:
+                for i in range(1, total_requested_slides):
+                    slides_data.append({
+                        "title": f"Mavzu bo'yicha qism {i}",
+                        "points": [f"{topic} haqida asosiy tushunchalar", f"Muhim jihatlari va tahlili {i}"]
+                    })
 
             # Информационные слайды
             for s_info in slides_data:
@@ -490,15 +510,7 @@ async def handle_web_app_data(message: types.Message):
 
         except Exception as e:
             logging.error(f"Presentation generation error: {e}")
-            prs = Presentation()
-            slide = prs.slides.add_slide(prs.slide_layouts[0])
-            slide.shapes.title.text = topic
-            slide.placeholders[1].text = f"Muallif: {muallif}\n\nTaqdimot muvaffaqiyatli yaratildi."
-            
-            file_stream = io.BytesIO()
-            prs.save(file_stream)
-            file_stream.seek(0)
-            await message.answer_document(BufferedInputFile(file_stream.getvalue(), filename="taqdimot.pptx"))
+            await message.answer("❌ Taqdimotni yaratishda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.", reply_markup=get_main_keyboard())
             return
 
 @dp.message(F.text)

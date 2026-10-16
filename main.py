@@ -299,7 +299,6 @@ async def handle_incoming_files(message: types.Message):
         waiting_for_receipt.discard(user.id)
         admin_caption = f"📥 <b>Yangi to'lov cheki keldi!</b>\n👤 Foydalanuvchi: {html.escape(user.full_name)} (ID: <code>{user.id}</code>)"
         
-        # Кнопки выбора суммы для администратора (3000, 5000, 7000)
         admin_keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
                 [
@@ -379,6 +378,21 @@ async def process_admin_decision(callback: types.CallbackQuery):
 
 @dp.message(F.web_app_data)
 async def handle_web_app_data(message: types.Message):
+    user_id = message.from_user.id
+    current_balance = user_balances.get(user_id, 3000)
+    cost = 3000  # Har bir taqdimot narxi
+
+    if current_balance < cost:
+        await message.answer(
+            f"❌ **Balansingiz yetarli emas!**\n\n"
+            f"Sizning balansingiz: {current_balance} so'm.\n"
+            f"Taqdimot yaratish uchun kamida {cost} so'm kerak.\n\n"
+            f"Balansni to'ldirish uchun /buy buyrug'idan foydalaning.",
+            reply_markup=get_main_keyboard(),
+            parse_mode="Markdown"
+        )
+        return
+
     raw_data = message.web_app_data.data
     
     try:
@@ -387,8 +401,11 @@ async def handle_web_app_data(message: types.Message):
         data = {"mavzu": raw_data}
 
     if isinstance(data, dict) and data.get("action") == "edit_presentation":
+        # Tahrirlash uchun ham balansdan yechamiz
+        user_balances[user_id] = current_balance - cost
+        
         slides_data = data.get("slides", [])
-        await message.answer("⏳ Tahrirlangan taqdimot tayyorlanmoqda...", parse_mode="Markdown")
+        await message.answer(f"⏳ Tahrirlangan taqdimot tayyorlanmoqda... (-{cost} so'm)", parse_mode="Markdown")
         try:
             prs = Presentation()
             for s_info in slides_data:
@@ -413,7 +430,7 @@ async def handle_web_app_data(message: types.Message):
 
             input_file = BufferedInputFile(file_stream.getvalue(), filename="tahrirlangan_taqdimot.pptx")
             await message.answer(
-                "✅ **Sizning tahrirlangan taqdimotingiz tayyor!** Marhamat, yuklab oling:",
+                f"✅ **Sizning tahrirlangan taqdimotingiz tayyor!**\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: {user_balances[user_id]} so'm",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )
@@ -427,10 +444,13 @@ async def handle_web_app_data(message: types.Message):
     topic = data.get('mavzu') or data.get('topic') or data.get('title')
     
     if topic:
+        # Balansdan pulni yechib qolamiz
+        user_balances[user_id] = current_balance - cost
+        
         num_slides = int(data.get('sahifalar', 7))
         muallif = data.get('muallif', 'Farrux')
         
-        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {num_slides} ta slayddan iborat taqdimot tayyorlamoqda...**", parse_mode="Markdown")
+        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {num_slides} ta slayddan iborat taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
         try:
             prompt = (
@@ -488,7 +508,7 @@ async def handle_web_app_data(message: types.Message):
             input_file = BufferedInputFile(file_stream.getvalue(), filename=filename)
             
             await message.answer(
-                f"✅ **Sizning taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n📄 Sahifalar soni: {len(slides_data) + 1}\n\nMarhamat, yuklab oling:",
+                f"✅ **Sizning taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n📄 Sahifalar soni: {len(slides_data) + 1}\n💳 Hisobingizdan {cost} so'm yechildi. Qoldiq: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )

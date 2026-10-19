@@ -437,7 +437,6 @@ async def handle_web_app_data(message: types.Message):
         
         slides_data = []
         try:
-            # Настройка качества в зависимости от тарифа
             if tarif == "standard":
                 quality_instruction = "Oddiy va tushunarli akademik til, qisqaroq va aniq ma'lumotlar."
             elif tarif == "premium":
@@ -445,14 +444,14 @@ async def handle_web_app_data(message: types.Message):
             else:  # high_premium
                 quality_instruction = "Maksimal darajada batafsil, yuqori ilmiy darajadagi professional tahlil, boy va keng qamrovli kontent."
 
-            content_slides_count = max(1, total_requested_slides - 2) # Титульный и План займут 2 слайда
+            content_slides_count = max(1, total_requested_slides - 2)
 
             prompt = (
                 f"Siz professional akademik taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq taqdimot tuzing.\n"
                 f"Sifat darajasi: {quality_instruction}\n\n"
                 "Siz quyidagi qat'iy tuzilishga ega JSON massivini qaytarishingiz SHART:\n"
                 "1-element (2-slayd) QАТ'ИЙ равишда quyidagicha bo'lishi kerak:\n"
-                "- Sarlavhasi (title): 'Reja, Xulosa va Adabiyotlar' (yoki shunga o'xshash akademik sarlavha)\n"
+                "- Sarlavhasi (title): 'Reja, Xulosa va Adabiyotlar'\n"
                 "- Nuqtalar (points): \n"
                 "  1. Reja: 3 ta asosiy reja bandi.\n"
                 "  2. Xulosa: Qisqacha ilmiy xulosa.\n"
@@ -500,7 +499,6 @@ async def handle_web_app_data(message: types.Message):
             slide.shapes.title.text = topic
             slide.placeholders[1].text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
 
-            # Если JSON пустой, создаем структурированный шаблон автоматически
             if not slides_data:
                 slides_data = [
                     {
@@ -518,7 +516,6 @@ async def handle_web_app_data(message: types.Message):
                         "points": [f"{topic} bo'yicha ilmiy yondashuvlar", f"Amaliy ahamiyati va tahlili {i}"]
                     })
 
-            # Добавляем слайды в презентацию
             for s_info in slides_data:
                 slide_layout = prs.slide_layouts[1]
                 slide = prs.slides.add_slide(slide_layout)
@@ -563,9 +560,13 @@ async def handle_other_text(message: types.Message):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
+    
     # Запускаем FastAPI в отдельном потоке
     server_thread = Thread(target=run_fastapi, daemon=True)
     server_thread.start()
+    
+    # Сбрасываем старые веб-хуки, чтобы бот сразу начал реагировать
+    await bot.delete_webhook(drop_pending_updates=True)
     
     print("Bot va FastAPI server muvaffaqiyatli ishga tushdi!")
     await set_bot_commands(bot)

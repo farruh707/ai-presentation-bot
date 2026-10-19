@@ -5,6 +5,7 @@ import html
 import io
 import zipfile
 import urllib.parse
+import sqlite3
 from google import genai
 from pptx import Presentation
 from pptx.util import Pt
@@ -45,6 +46,44 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
+# --- РАБОТА С БАЗОЙ ДАННЫХ (SQLite) ---
+DB_NAME = "bot_database.db"
+
+def init_db():
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            user_id INTEGER PRIMARY KEY,
+            balance INTEGER DEFAULT 3000
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def get_user_balance(user_id: int) -> int:
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,))
+    row = cursor.fetchone()
+    if row is None:
+        # Если пользователя нет в базе, даем начальный бонус 3000 сум
+        cursor.execute('INSERT OR REPLACE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
+        conn.commit()
+        balance = 3000
+    else:
+        balance = row[0]
+    conn.close()
+    return balance
+
+def update_user_balance(user_id: int, new_balance: int):
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute('INSERT OR REPLACE INTO users (user_id, balance) VALUES (?, ?)', (user_id, new_balance))
+    conn.commit()
+    conn.close()
+# -------------------------------------
+
 # Настройка FastAPI приложения для Render
 app = FastAPI()
 
@@ -56,7 +95,6 @@ def run_fastapi():
     port = int(os.environ.get("PORT", 10000))
     uvicorn.run(app, host="0.0.0.0", port=port)
 
-user_balances = {}
 waiting_for_receipt = set()
 waiting_for_pdf_photos = set()
 user_pdf_images = {}
@@ -106,8 +144,8 @@ async def cmd_start(message: types.Message):
     except Exception:
         pass
 
-    if message.from_user.id not in user_balances:
-        user_balances[message.from_user.id] = 3000
+    # Автоматически регистрируем пользователя в БД и даем бонус при первом входе
+    get_user_balance(message.from_user.id)
 
     welcome_text = (
         f"Salom **{message.from_user.full_name}**, AI Taqdimot | Slayd | PPT | PDF Bot ga xush kelibsiz\n\n"
@@ -142,7 +180,7 @@ async def cmd_cancel(message: types.Message):
 
 @dp.message(Command("balance"))
 async def cmd_balance(message: types.Message):
-    bal = user_balances.get(message.from_user.id, 3000)
+    bal = get_user_balance(message.from_user.id)
     await message.answer(f"💳 Sizning balansingiz: **{bal} so'm**", parse_mode="Markdown", reply_markup=get_main_keyboard())
 
 @dp.message(Command("buy"))
@@ -387,7 +425,11 @@ async def process_admin_decision(callback: types.CallbackQuery):
     data_parts = callback.data.split("_")
     target_user_id = int(data_parts[1])
     add_amount = int(data_parts[2])
-    user_balances[target_user_id] = user_balances.get(target_user_id, 0) + add_amount
+    
+    current_bal = get_user_balance(target_user_id)
+    new_bal = current_bal + add_amount
+    update_user_balance(target_user_id, new_bal)
+
     await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi.")
     await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Tasdiqlandi (+{add_amount} so'm)")
     await callback.answer("Bajarildi!")
@@ -395,7 +437,7 @@ async def process_admin_decision(callback: types.CallbackQuery):
 @dp.message(F.web_app_data)
 async def handle_web_app_data(message: types.Message):
     user_id = message.from_user.id
-    current_balance = user_balances.get(user_id, 3000)
+    current_balance = get_user_balance(user_id)
 
     raw_data = message.web_app_data.data
     try:
@@ -430,8 +472,9 @@ async def handle_web_app_data(message: types.Message):
         muallif = data.get('muallif', 'Farrux')
         til = data.get('til', "O'zbek tili")
         
-        # Списание средств
-        user_balances[user_id] = current_balance - cost
+        # Списание средств и сохранение в БД
+        update_user_balance(user_id, current_balance - cost)
+        new_balance = get_user_balance(user_id)
         
         await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat akademik taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
@@ -542,7 +585,7 @@ async def handle_web_app_data(message: types.Message):
             
             total_created = len(slides_data) + 1
             await message.answer(
-                f"✅ **Akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n📄 Sahifalar soni: {total_created} ta\n💳 Qoldiq balans: **{user_balances[user_id]} so'm**\n\nMarhamat, yuklab oling:",
+                f"✅ **Akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n📄 Sahifalar soni: {total_created} ta\n💳 Qoldiq balans: **{new_balance} so'm**\n\nMarhamat, yuklab oling:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )
@@ -561,14 +604,17 @@ async def handle_other_text(message: types.Message):
 async def main():
     logging.basicConfig(level=logging.INFO)
     
+    # Инициализируем базу данных при запуске
+    init_db()
+    
     # Запускаем FastAPI в отдельном потоке
     server_thread = Thread(target=run_fastapi, daemon=True)
     server_thread.start()
     
-    # Сбрасываем старые веб-хуки, чтобы бот сразу начал реагировать
+    # Сбрасываем старые веб-хуки
     await bot.delete_webhook(drop_pending_updates=True)
     
-    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi!")
+    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (Baza ulangan)!")
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 

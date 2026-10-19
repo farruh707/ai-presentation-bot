@@ -113,7 +113,7 @@ def get_main_keyboard():
         keyboard=[
             [KeyboardButton(text="PDF yaratish 📕"), KeyboardButton(text="Fayllarni zip qilish 🗂")],
             [
-                KeyboardButton(text="Taqdimot tayyorlash 🖼", web_app=WebAppInfo(url="https://farruh707.github.io/ai-presentation-bot/index.html")), 
+                KeyboardButton(text="Taqdimot tayyorlash 🖼", web_app=WebAppInfo(url="[https://farruh707.github.io/ai-presentation-bot/index.html](https://farruh707.github.io/ai-presentation-bot/index.html)")), 
                 KeyboardButton(text="Akademik Slayd yaratish 🎓")
             ],
             [KeyboardButton(text="Media Slaydlar 🎬")],
@@ -122,7 +122,7 @@ def get_main_keyboard():
                 KeyboardButton(text="Word tahrirlash 📝"), 
                 KeyboardButton(
                     text="Titul varag'i 📄", 
-                    web_app=WebAppInfo(url="https://farruh707.github.io/ai-presentation-bot/titul.html")
+                    web_app=WebAppInfo(url="[https://farruh707.github.io/ai-presentation-bot/titul.html](https://farruh707.github.io/ai-presentation-bot/titul.html)")
                 )
             ],
             [KeyboardButton(text="Obyektivka 📎")]
@@ -145,7 +145,7 @@ def fetch_free_image(query: str) -> io.BytesIO:
     """Загрузка фоновой картинки по ключевому слову"""
     try:
         clean_query = urllib.parse.quote(query[:20])
-        image_url = f"https://picsum.photos/seed/{clean_query}/800/600"
+        image_url = f"[https://picsum.photos/seed/](https://picsum.photos/seed/){clean_query}/800/600"
         req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=5) as resp:
             return io.BytesIO(resp.read())
@@ -186,7 +186,7 @@ async def cmd_help(message: types.Message):
     )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📖 Qo'llanmani ochish", url="https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05")]
+            [InlineKeyboardButton(text="📖 Qo'llanmani ochish", url="[https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05](https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05)")]
         ]
     )
     await message.answer(help_text, reply_markup=keyboard, parse_mode="Markdown")
@@ -213,7 +213,7 @@ async def cmd_buy(message: types.Message):
         "Taqdimotda yoziladiga ma'lumotlar ikki xil sifatga ega. Ushbu sifatlarga ko'ra bitta taqdimot yaratish narxlari quyidagicha:\n\n"
         "⭐️ **Standart**: 3000 so'm.\n"
         "⭐️⭐️ **Premium**: 5000 so'm.\n"
-        "⭐️⭐️⭐️ **Yuqori sifatli Premium**: 7000 so me."
+        "⭐️⭐️⭐️ **Yuqori sifatli Premium**: 7000 so'm."
     )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -232,7 +232,7 @@ async def process_card_choice(callback: types.CallbackQuery):
     )
     admin_keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="👨‍💻 Administratorga yozish (@farrux204)", url="https://t.me/farrux204")]
+            [InlineKeyboardButton(text="👨‍💻 Administratorga yozish (@farrux204)", url="[https://t.me/farrux204](https://t.me/farrux204)")]
         ]
     )
     await callback.message.answer(card_info_text, reply_markup=admin_keyboard, parse_mode="Markdown")
@@ -422,7 +422,7 @@ async def handle_incoming_files(message: types.Message):
                 return
             
             waiting_for_edit_file.discard(user.id)
-            webapp_url = "https://farruh707.github.io/ai-presentation-bot/editor.html"
+            webapp_url = "[https://farruh707.github.io/ai-presentation-bot/editor.html](https://farruh707.github.io/ai-presentation-bot/editor.html)"
 
             response_text = (
                 f"✅ **Fayl qabul qilindi!**\n\n"
@@ -503,7 +503,7 @@ async def handle_web_app_data(message: types.Message):
                 "QAT'IY QOIDALAR:\n"
                 "1. Reja nomlari umumiylashtirilgan bo'lmasin (Kirish, Asosiy qism deb yozish TAQIQLANADI). "
                 f"Reja nomlari '{topic}' mavzusining ichki mohiyatidan kelib chiqib, ilmiy va aniq nomlanishi shart!\n"
-                "2. Hech qanday belgi, nuqta, tire yoki marsker qo'shmang.\n\n"
+                "2. Hech qanday belgi, nuqta, tire yoki marker qo'shmang.\n\n"
                 "JSON FORMATIDA QAYTARING:\n"
                 "{\n"
                 "  \"reja\": [\"1. [Mavzuga mos 1-reja nomi]\", \"2. [Mavzuga mos 2-reja nomi]\", \"3. [Mavzuga mos 3-reja nomi]\"],\n"
@@ -536,14 +536,10 @@ async def handle_web_app_data(message: types.Message):
             )
             
             clean_text = response.text.strip()
-            if "
-```json" in clean_text:
-                clean_text = clean_text.split("
-```json")[1].split("```")[0].strip()
-            elif "
-```" in clean_text:
-                clean_text = clean_text.split("
-```")[1].split("```")[0].strip()
+            if "```json" in clean_text:
+                clean_text = clean_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in clean_text:
+                clean_text = clean_text.split("```")[1].split("```")[0].strip()
                 
             parsed_data = json.loads(clean_text)
 
@@ -607,121 +603,4 @@ async def handle_web_app_data(message: types.Message):
             # 3. Список пунктов плана (БЕЗ точек и маркеров)
             content_box = slide2.shapes.add_textbox(Inches(1.0), Inches(2.2), Inches(11.333), Inches(4.8))
             tf_content = content_box.text_frame
-            tf_content.word_wrap = True
-
-            reja_list = parsed_data.get("reja", ["1. Kirish", "2. Tahlil", "3. Natijalar"])
-            for idx, r_item in enumerate(reja_list):
-                p_item = tf_content.paragraphs[0] if idx == 0 else tf_content.add_paragraph()
-                p_item.text = str(r_item)
-                p_item.alignment = PP_ALIGN.LEFT
-                p_item.font.name = "Times New Roman"
-                p_item.font.size = Pt(26)
-
-            # Xulosa
-            p_x_title = tf_content.add_paragraph()
-            p_x_title.text = "\nXulosa:"
-            p_x_title.font.name = "Times New Roman"
-            p_x_title.font.size = Pt(28)
-            p_x_title.font.bold = True
-
-            p_x = tf_content.add_paragraph()
-            p_x.text = parsed_data.get("xulosa", "Mavzu bo'yicha ilmiy xulosalar shakllantirildi.")
-            p_x.font.name = "Times New Roman"
-            p_x.font.size = Pt(22)
-
-            # Adabiyotlar
-            p_ad_title = tf_content.add_paragraph()
-            p_ad_title.text = "\nFoydalanilgan adabiyotlar:"
-            p_ad_title.font.name = "Times New Roman"
-            p_ad_title.font.size = Pt(28)
-            p_ad_title.font.bold = True
-
-            for ad_item in parsed_data.get("adabiyotlar", ["1. Manba 2024"]):
-                p_ad = tf_content.add_paragraph()
-                p_ad.text = str(ad_item)
-                p_ad.font.name = "Times New Roman"
-                p_ad.font.size = Pt(22)
-
-            # --- Слайды по содержанию ---
-            plan_details = parsed_data.get("plan_details", [])
-            for plan_info in plan_details:
-                p_title = plan_info.get("plan_title", "Reja bo'limi")
-                paragraphs = plan_info.get("paragraphs", [])
-                img_kw = plan_info.get("image_keyword", "science")
-
-                img_stream = fetch_free_image(img_kw)
-
-                chunk_size = 2
-                for i in range(0, len(paragraphs), chunk_size):
-                    chunk = paragraphs[i:i + chunk_size]
-                    
-                    slide_item = prs.slides.add_slide(blank_layout)
-                    
-                    # Заголовок раздела
-                    h_box = slide_item.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(11.733), Inches(1.0))
-                    tf_h = h_box.text_frame
-                    tf_h.word_wrap = True
-                    p_h = tf_h.paragraphs[0]
-                    p_h.text = p_title
-                    p_h.font.name = "Times New Roman"
-                    p_h.font.size = Pt(36)
-                    p_h.font.bold = True
-
-                    # Текст без маркеров
-                    tx_box = slide_item.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(7.0), Inches(5.0))
-                    tf_b = tx_box.text_frame
-                    tf_b.word_wrap = True
-
-                    for idx, para in enumerate(chunk):
-                        p_elem = tf_b.paragraphs[0] if idx == 0 else tf_b.add_paragraph()
-                        p_elem.text = str(para)
-                        p_elem.font.name = "Times New Roman"
-                        p_elem.font.size = Pt(26)
-
-                    # Картинка справа
-                    if img_stream:
-                        try:
-                            slide_item.shapes.add_picture(img_stream, Inches(8.2), Inches(1.8), width=Inches(4.5))
-                        except Exception as e:
-                            logging.error(f"Image insert error: {e}")
-
-            # Сохранение и отправка
-            file_stream = io.BytesIO()
-            prs.save(file_stream)
-            file_stream.seek(0)
-
-            filename = f"Slayd_{muallif}_{topic[:10]}.pptx".replace(" ", "_")
-            input_file = BufferedInputFile(file_stream.getvalue(), filename=filename)
-            
-            await message.answer(
-                f"✅ **Akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n💳 Qoldiq balans: **{new_balance} so'm**\n\nMarhamat, yuklab oling:",
-                reply_markup=get_main_keyboard(),
-                parse_mode="Markdown"
-            )
-            await message.answer_document(input_file)
-            return
-
-        except Exception as e:
-            logging.error(f"Presentation generation error: {e}")
-            await message.answer("❌ Taqdimotni yaratishda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.", reply_markup=get_main_keyboard())
-            return
-
-@dp.message(F.text)
-async def handle_other_text(message: types.Message):
-    await message.answer("❗ Iltimos, menyudan kerakli tugmani tanlang.", reply_markup=get_main_keyboard())
-
-async def main():
-    logging.basicConfig(level=logging.INFO)
-    init_db()
-    
-    server_thread = Thread(target=run_fastapi, daemon=True)
-    server_thread.start()
-    
-    await bot.delete_webhook(drop_pending_updates=True)
-    
-    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi!")
-    await set_bot_commands(bot)
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+            tf_

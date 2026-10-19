@@ -6,11 +6,12 @@ import io
 import zipfile
 import urllib.parse
 import sqlite3
+import urllib.request
 from google import genai
 from pptx import Presentation
-from pptx.util import Pt
+from pptx.util import Pt, Inches
 from docx import Document
-from docx.shared import Inches
+from docx.shared import Inches as DocxInches
 from PIL import Image
 
 # Задаем кодировку UTF-8
@@ -62,8 +63,6 @@ def init_db():
     conn.close()
 
 def register_user(user_id: int):
-    """Регистрирует пользователя ТОЛЬКО один раз и дает бонус 3000 сум. 
-    Если пользователь уже есть в базе, этот метод ничего не меняет (баланс не сбрасывается)!"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
@@ -143,6 +142,27 @@ async def set_bot_commands(bot: Bot):
     ]
     await bot.set_my_commands(commands)
 
+def fetch_free_image(query: str) -> io.BytesIO:
+    """Скачивает бесплатную тематическую картинку с Unsplash Source"""
+    try:
+        clean_query = urllib.parse.quote(query)
+        image_url = f"https://source.unsplash.com/800x600/?{clean_query},presentation"
+        req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            image_bytes = resp.read()
+            return io.BytesIO(image_bytes)
+    except Exception as e:
+        logging.error(f"Image download error: {e}")
+        return None
+
+def apply_text_styling(shape, font_size=32, is_title=False):
+    """Применяет шрифт Times New Roman и нужные размеры шрифта"""
+    if not shape.has_text_frame:
+        return
+    for paragraph in shape.text_frame.paragraphs:
+        paragraph.font.name = "Times New Roman"
+        paragraph.font.size = Pt(44) if is_title else Pt(font_size)
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     try:
@@ -150,7 +170,6 @@ async def cmd_start(message: types.Message):
     except Exception:
         pass
 
-    # Регистрируем пользователя только если он новый. Старый баланс не сбрасывается!
     register_user(message.from_user.id)
 
     welcome_text = (
@@ -451,7 +470,6 @@ async def handle_web_app_data(message: types.Message):
     except Exception:
         data = {"mavzu": raw_data}
 
-    # Определение тарифа и списание средств
     tarif = data.get("tarif", "standard")
     tariff_prices = {
         "standard": 3000,
@@ -474,7 +492,6 @@ async def handle_web_app_data(message: types.Message):
     topic = data.get('mavzu') or data.get('topic') or data.get('title')
     
     if topic:
-        total_requested_slides = int(data.get('sahifalar', 7))
         muallif = data.get('muallif', 'Farrux')
         til = data.get('til', "O'zbek tili")
         
@@ -482,36 +499,36 @@ async def handle_web_app_data(message: types.Message):
         update_user_balance(user_id, current_balance - cost)
         new_balance = get_user_balance(user_id)
         
-        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida {total_requested_slides} ta slayddan iborat akademik taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
+        await message.answer(f"⏳ **Sun'iy intellekt '{topic}' mavzusida albomli akademik taqdimot tayyorlamoqda...** (-{cost} so'm)", parse_mode="Markdown")
         
-        slides_data = []
+        parsed_data = {}
         try:
-            if tarif == "standard":
-                quality_instruction = "Oddiy va tushunarli akademik til, qisqaroq va aniq ma'lumotlar."
-            elif tarif == "premium":
-                quality_instruction = "Chuqurlashtirilgan tahliliy ma'lumotlar, ilmiy yondashuv va kengroq tushuntirishlar."
-            else:  # high_premium
-                quality_instruction = "Maksimal darajada batafsil, yuqori ilmiy darajadagi professional tahlil, boy va keng qamrovli kontent."
-
-            content_slides_count = max(1, total_requested_slides - 2)
-
             prompt = (
-                f"Siz professional akademik taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq taqdimot tuzing.\n"
-                f"Sifat darajasi: {quality_instruction}\n\n"
-                "Siz quyidagi qat'iy tuzilishga ega JSON massivini qaytarishingiz SHART:\n"
-                "1-element (2-slayd) QАТ'ИЙ равишда quyidagicha bo'lishi kerak:\n"
-                "- Sarlavhasi (title): 'Reja, Xulosa va Adabiyotlar'\n"
-                "- Nuqtalar (points): \n"
-                "  1. Reja: 3 ta asosiy reja bandi.\n"
-                "  2. Xulosa: Qisqacha ilmiy xulosa.\n"
-                "  3. Foydalanilgan adabiyotlar: 2-3 ta ilmiy manba.\n\n"
-                f"Qolgan {content_slides_count} ta element esa yuqoridagi rejaga muvofiq keyingi slaydlar uchun batafsil matnlar bo'lishi kerak.\n"
-                f"Jami elementlar soni {content_slides_count + 1} ta bo'lishi shart.\n"
-                "Javobni FAQAT quyidagi JSON formatida yuboring, boshqa hech qanday matn yozmang:\n"
-                "[\n"
-                "  {\"title\": \"Reja, Xulosa va Adabiyotlar\", \"points\": [\"1. Reja: ...\", \"2. Xulosa: ...\", \"3. Adabiyotlar: ...\"]},\n"
-                "  {\"title\": \"1-Reja bo'limi sarlavhasi\", \"points\": [\"Batafsil ma'lumot 1\", \"Batafsil ma'lumot 2\"]}\n"
-                "]"
+                f"Siz professional akademik taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq taqdimot tuzing.\n\n"
+                "Siz quyidagi qat'iy JSON formatini qaytarishingiz SHART:\n"
+                "{\n"
+                "  \"reja\": [\"1-reja sarlavhasi\", \"2-reja sarlavhasi\", \"3-reja sarlavhasi\"],\n"
+                "  \"xulosa\": \"Mavzu bo'yicha batafsil va ilmiy xulosa matni.\",\n"
+                "  \"adabiyotlar\": [\"1. Manba nomi 2024\", \"2. Manba nomi 2025\"],\n"
+                "  \"plan_details\": [\n"
+                "    {\n"
+                "      \"plan_title\": \"1-reja sarlavhasi\",\n"
+                "      \"paragraphs\": [\"Batafsil matn абзац 1 (A4 formatiga mos keladigan darajada chuqur tahlil)\", \"Batafsil matn абзац 2\", \"Batafsil matn абзац 3\"],\n"
+                "      \"image_keyword\": \"technology or history topic in English\"\n"
+                "    },\n"
+                "    {\n"
+                "      \"plan_title\": \"2-reja sarlavhasi\",\n"
+                "      \"paragraphs\": [\"Batafsil matn 1\", \"Batafsil matn 2\", \"Batafsil matn 3\"],\n"
+                "      \"image_keyword\": \"science or economics topic in English\"\n"
+                "    },\n"
+                "    {\n"
+                "      \"plan_title\": \"3-reja sarlavhasi\",\n"
+                "      \"paragraphs\": [\"Batafsil matn 1\", \"Batafsil matn 2\", \"Batafsil matn 3\"],\n"
+                "      \"image_keyword\": \"education or research topic in English\"\n"
+                "    }\n"
+                "  ]\n"
+                "}\n"
+                "Har bir plan_details uchun камида 3-4 ta juda batafsil va chuqur tahliliy абзац яратинг (2 ta A4 варағи ҳажмида)."
             )
             
             response = ai_client.models.generate_content(
@@ -528,59 +545,123 @@ async def handle_web_app_data(message: types.Message):
             elif "```" in clean_text:
                 clean_text = clean_text.split("```")[1].split("```")[0].strip()
                 
-            json_start = clean_text.find('[')
-            json_end = clean_text.rfind(']')
-            if json_start != -1 and json_end != -1:
-                clean_text = clean_text[json_start:json_end+1]
-
-            slides_data = json.loads(clean_text)
+            parsed_data = json.loads(clean_text)
 
         except Exception as e:
             logging.error(f"JSON parsing or AI error: {e}")
-            slides_data = []
 
         try:
             prs = Presentation()
             
+            # Задаем АЛЬБОМНУЮ ориентацию (16:9 widescreen)
+            prs.slide_width = Inches(13.333)
+            prs.slide_height = Inches(7.5)
+
             # Слайд 1: Титульный
             slide_layout = prs.slide_layouts[0]
             slide = prs.slides.add_slide(slide_layout)
-            slide.shapes.title.text = topic
-            slide.placeholders[1].text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
+            
+            title_shape = slide.shapes.title
+            title_shape.text = topic
+            apply_text_styling(title_shape, font_size=44, is_title=True)
 
-            if not slides_data:
-                slides_data = [
-                    {
-                        "title": "Reja, Xulosa va Adabiyotlar",
-                        "points": [
-                            "Reja: 1. Mavzuning dolzarbligi; 2. Asosiy tahlil; 3. Yakuniy natijalar.",
-                            "Xulosa: Mavzu bo'yicha umumiy ilmiy xulosalar.",
-                            "Adabiyotlar: O'zbekiston Respublikasi qonunchiligi va ilmiy manbalar."
-                        ]
-                    }
-                ]
-                for i in range(2, total_requested_slides):
-                    slides_data.append({
-                        "title": f"{i}-bo'lim: {topic} tahlili",
-                        "points": [f"{topic} bo'yicha ilmiy yondashuvlar", f"Amaliy ahamiyati va tahlili {i}"]
-                    })
+            subtitle_shape = slide.placeholders[1]
+            subtitle_shape.text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
+            apply_text_styling(subtitle_shape, font_size=32)
 
-            for s_info in slides_data:
-                slide_layout = prs.slide_layouts[1]
-                slide = prs.slides.add_slide(slide_layout)
-                
-                title_shape = slide.shapes.title
-                title_shape.text = s_info.get('title', 'Sarlavha')
-                
-                body_shape = slide.placeholders[1]
-                tf = body_shape.text_frame
-                tf.text = ""
-                
-                for point in s_info.get('points', []):
-                    p = tf.add_paragraph()
-                    p.text = point
-                    p.level = 0
-                    p.space_after = Pt(8)
+            # Слайд 2: План, Заключение и Литература
+            slide_layout = prs.slide_layouts[1]
+            slide = prs.slides.add_slide(slide_layout)
+            
+            title_shape = slide.shapes.title
+            title_shape.text = topic
+            apply_text_styling(title_shape, font_size=44, is_title=True)
+
+            body_shape = slide.placeholders[1]
+            tf = body_shape.text_frame
+            tf.word_wrap = True
+            tf.text = ""
+
+            # Reja
+            p = tf.add_paragraph()
+            p.text = "Reja:"
+            p.font.name = "Times New Roman"
+            p.font.size = Pt(32)
+            p.font.bold = True
+
+            reja_list = parsed_data.get("reja", ["1. Kirish va dolzarblik", "2. Asosiy tahlil", "3. Yakuniy natijalar"])
+            for r_item in reja_list:
+                p = tf.add_paragraph()
+                p.text = r_item
+                p.font.name = "Times New Roman"
+                p.font.size = Pt(32)
+
+            # Xulosa
+            p = tf.add_paragraph()
+            p.text = "\nXulosa:"
+            p.font.name = "Times New Roman"
+            p.font.size = Pt(32)
+            p.font.bold = True
+
+            xulosa_text = parsed_data.get("xulosa", "Mavzu bo'yicha ilmiy xulosalar shakllantirildi.")
+            p = tf.add_paragraph()
+            p.text = xulosa_text
+            p.font.name = "Times New Roman"
+            p.font.size = Pt(32)
+
+            # Foydalanilgan adabiyotlar
+            p = tf.add_paragraph()
+            p.text = "\nFoydalanilgan adabiyotlar ro'yxati:"
+            p.font.name = "Times New Roman"
+            p.font.size = Pt(32)
+            p.font.bold = True
+
+            adabiyotlar = parsed_data.get("adabiyotlar", ["1. O'zbekiston Respublikasi ilmiy manbalari 2024."])
+            for ad_item in adabiyotlar:
+                p = tf.add_paragraph()
+                p.text = ad_item
+                p.font.name = "Times New Roman"
+                p.font.size = Pt(32)
+
+            # Слайды по каждому пункту плана с картинками и развернутым текстом
+            plan_details = parsed_data.get("plan_details", [])
+            for plan_info in plan_details:
+                p_title = plan_info.get("plan_title", "Reja bo'limi")
+                paragraphs = plan_info.get("paragraphs", [])
+                img_kw = plan_info.get("image_keyword", "presentation")
+
+                # Скачиваем тематическую картинку
+                img_stream = fetch_free_image(img_kw)
+
+                # Распределяем текст по слайдам (по 2 абзаца на слайд, чтобы помещалось с 32 pt)
+                chunk_size = 2
+                for i in range(0, len(paragraphs), chunk_size):
+                    chunk = paragraphs[i:i + chunk_size]
+                    
+                    slide = prs.slides.add_slide(prs.slide_layouts[5]) # Пустой слайд с заголовком
+                    
+                    t_shape = slide.shapes.title
+                    t_shape.text = f"{p_title}"
+                    apply_text_styling(t_shape, font_size=44, is_title=True)
+
+                    # Добавляем текстовый блок слева
+                    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(7.5), Inches(5.0))
+                    tf_box = txBox.text_frame
+                    tf_box.word_wrap = True
+
+                    for para in chunk:
+                        p_elem = tf_box.add_paragraph()
+                        p_elem.text = para
+                        p_elem.font.name = "Times New Roman"
+                        p_elem.font.size = Pt(32)
+                        p_elem.space_after = Pt(14)
+
+                    # Если картинка есть, добавляем её справа
+                    if img_stream:
+                        try:
+                            slide.shapes.add_picture(img_stream, Inches(8.5), Inches(1.8), width=Inches(4.2))
+                        except Exception as e:
+                            logging.error(f"Error adding picture to slide: {e}")
 
             file_stream = io.BytesIO()
             prs.save(file_stream)
@@ -589,9 +670,8 @@ async def handle_web_app_data(message: types.Message):
             filename = f"Slayd_{muallif}_{topic[:10]}.pptx".replace(" ", "_")
             input_file = BufferedInputFile(file_stream.getvalue(), filename=filename)
             
-            total_created = len(slides_data) + 1
             await message.answer(
-                f"✅ **Akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n📄 Sahifalar soni: {total_created} ta\n💳 Qoldiq balans: **{new_balance} so'm**\n\nMarhamat, yuklab oling:",
+                f"✅ **Albomli akademik taqdimotingiz tayyor!**\n\n📌 Mavzu: {topic}\n🏷 Tarif: {tarif.upper()} ({cost} so'm)\n💳 Qoldiq balans: **{new_balance} so'm**\n\nMarhamat, yuklab oling:",
                 reply_markup=get_main_keyboard(),
                 parse_mode="Markdown"
             )
@@ -610,17 +690,14 @@ async def handle_other_text(message: types.Message):
 async def main():
     logging.basicConfig(level=logging.INFO)
     
-    # Инициализируем базу данных при запуске
     init_db()
     
-    # Запускаем FastAPI в отдельном потоке
     server_thread = Thread(target=run_fastapi, daemon=True)
     server_thread.start()
     
-    # Сбрасываем старые веб-хуки
     await bot.delete_webhook(drop_pending_updates=True)
     
-    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (To'liq tuzatilgan версия)!")
+    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi!")
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 

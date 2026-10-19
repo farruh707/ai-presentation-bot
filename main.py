@@ -65,6 +65,7 @@ def init_db():
 def register_user(user_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    # Регистрируем пользователя только если его нет. Баланс устанавливаем 3000 только 1 раз!
     cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
     conn.commit()
     conn.close()
@@ -83,7 +84,7 @@ def get_user_balance(user_id: int) -> int:
 def update_user_balance(user_id: int, new_balance: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
+    register_user(user_id)
     cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (new_balance, user_id))
     conn.commit()
     conn.close()
@@ -153,14 +154,6 @@ def fetch_free_image(query: str) -> io.BytesIO:
         logging.error(f"Image download error: {e}")
         return None
 
-def apply_text_styling(shape, font_size=32, is_title=False):
-    """Стилизация шрифта Times New Roman"""
-    if not shape.has_text_frame:
-        return
-    for paragraph in shape.text_frame.paragraphs:
-        paragraph.font.name = "Times New Roman"
-        paragraph.font.size = Pt(44) if is_title else Pt(font_size)
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     try:
@@ -168,12 +161,15 @@ async def cmd_start(message: types.Message):
     except Exception:
         pass
 
+    # Регистрируем только если пользователь новый (существующий баланс НЕ сбрасывается)
     register_user(message.from_user.id)
+    current_bal = get_user_balance(message.from_user.id)
 
     welcome_text = (
         f"Salom **{message.from_user.full_name}**, AI Taqdimot | Slayd | PPT | PDF Bot ga xush kelibsiz\n\n"
         "Men taqdimot tayyorlash, hujjatlarni vizual tarzda taqdim etish va fayllarni boshqarish bo'yicha yordam beradigan aqlli botman.\n\n"
-        "/balance - sizning bot hamyonidagi balansingiz. Agar yangi a'zo bo'lgan bo'lsangiz sizda 3000 so'm bonus bor\n"
+        f"💳 Sizning joriy balansingiz: **{current_bal} so'm**\n\n"
+        "/balance - balansingizni tekshirish\n"
         "/buy - xarid bo'limi"
     )
     await message.answer(welcome_text, reply_markup=get_main_keyboard(), parse_mode="Markdown")
@@ -272,7 +268,7 @@ async def btn_pdf_start(message: types.Message):
         ],
         resize_keyboard=True
     )
-    await message.answer("iltimos PDF generatsiya qilish uchun rasm yuboring. Barcha rasmlarni yuborib bo'lgach, **'✅ Tayyor (PDF yaratish)'** tugmasini bosing.", reply_markup=keyboard, parse_mode="Markdown")
+    await message.answer("Iltimos, PDF generatsiya qilish uchun rasm yuboring. Barcha rasmlarni yuborib bo'lgach, **'✅ Tayyor (PDF yaratish)'** tugmasini bosing.", reply_markup=keyboard, parse_mode="Markdown")
 
 @dp.message(F.text == "✅ Tayyor (PDF yaratish)")
 async def generate_pdf_from_images(message: types.Message):
@@ -443,17 +439,21 @@ async def handle_incoming_files(message: types.Message):
 
 @dp.callback_query(F.data.startswith("accept_"))
 async def process_admin_decision(callback: types.CallbackQuery):
-    data_parts = callback.data.split("_")
-    target_user_id = int(data_parts[1])
-    add_amount = int(data_parts[2])
-    
-    current_bal = get_user_balance(target_user_id)
-    new_bal = current_bal + add_amount
-    update_user_balance(target_user_id, new_bal)
+    try:
+        data_parts = callback.data.split("_")
+        target_user_id = int(data_parts[1])
+        add_amount = int(data_parts[2])
+        
+        current_bal = get_user_balance(target_user_id)
+        new_bal = current_bal + add_amount
+        update_user_balance(target_user_id, new_bal)
 
-    await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi. Joriy balans: {new_bal} so'm.")
-    await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Tasdiqlandi (+{add_amount} so'm)")
-    await callback.answer("Bajarildi!")
+        await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi. Joriy balans: {new_bal} so'm.")
+        await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Tasdiqlandi (+{add_amount} so'm)")
+        await callback.answer("Bajarildi!")
+    except Exception as e:
+        logging.error(f"Admin accept error: {e}")
+        await callback.answer("Xatolik yuz berdi!", show_alert=True)
 
 @dp.message(F.web_app_data)
 async def handle_web_app_data(message: types.Message):
@@ -536,10 +536,14 @@ async def handle_web_app_data(message: types.Message):
             )
             
             clean_text = response.text.strip()
-            if "```json" in clean_text:
-                clean_text = clean_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in clean_text:
-                clean_text = clean_text.split("```")[1].split("```")[0].strip()
+            if "
+```json" in clean_text:
+                clean_text = clean_text.split("
+```json")[1].split("```")[0].strip()
+            elif "
+```" in clean_text:
+                clean_text = clean_text.split("
+```")[1].split("```")[0].strip()
                 
             parsed_data = json.loads(clean_text)
 
@@ -579,7 +583,7 @@ async def handle_web_app_data(message: types.Message):
             # --- Слайд 2: План слайд ---
             slide2 = prs.slides.add_slide(blank_layout)
             
-            # 1. Название темы (в самом верху)
+            # 1. Название темы
             top_box = slide2.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.733), Inches(0.8))
             tf_top = top_box.text_frame
             tf_top.word_wrap = True
@@ -590,7 +594,7 @@ async def handle_web_app_data(message: types.Message):
             p_top.font.size = Pt(28)
             p_top.font.bold = True
 
-            # 2. Слово REJA (СТРОГО ПО ЦЕНТРУ СЛАЙДА)
+            # 2. Слово REJA по центру
             reja_title_box = slide2.shapes.add_textbox(Inches(0.0), Inches(1.3), Inches(13.333), Inches(0.8))
             tf_reja = reja_title_box.text_frame
             p_reja = tf_reja.paragraphs[0]
@@ -600,7 +604,7 @@ async def handle_web_app_data(message: types.Message):
             p_reja.font.size = Pt(38)
             p_reja.font.bold = True
 
-            # 3. Список пунктов плана (БЕЗ точек и маркеров)
+            # 3. Список пунктов плана
             content_box = slide2.shapes.add_textbox(Inches(1.0), Inches(2.2), Inches(11.333), Inches(4.8))
             tf_content = content_box.text_frame
             tf_content.word_wrap = True

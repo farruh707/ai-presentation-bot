@@ -65,7 +65,6 @@ def init_db():
 def register_user(user_id: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # Регистрируем пользователя только если его нет. Баланс устанавливаем 3000 только 1 раз!
     cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
     conn.commit()
     conn.close()
@@ -114,7 +113,7 @@ def get_main_keyboard():
         keyboard=[
             [KeyboardButton(text="PDF yaratish 📕"), KeyboardButton(text="Fayllarni zip qilish 🗂")],
             [
-                KeyboardButton(text="Taqdimot tayyorlash 🖼", web_app=WebAppInfo(url="https://farruh707.github.io/ai-presentation-bot/index.html")), 
+                KeyboardButton(text="Taqdimot tayyorlash 🖼", web_app=WebAppInfo(url="[https://farruh707.github.io/ai-presentation-bot/index.html](https://farruh707.github.io/ai-presentation-bot/index.html)")), 
                 KeyboardButton(text="Akademik Slayd yaratish 🎓")
             ],
             [KeyboardButton(text="Media Slaydlar 🎬")],
@@ -123,7 +122,7 @@ def get_main_keyboard():
                 KeyboardButton(text="Word tahrirlash 📝"), 
                 KeyboardButton(
                     text="Titul varag'i 📄", 
-                    web_app=WebAppInfo(url="https://farruh707.github.io/ai-presentation-bot/titul.html")
+                    web_app=WebAppInfo(url="[https://farruh707.github.io/ai-presentation-bot/titul.html](https://farruh707.github.io/ai-presentation-bot/titul.html)")
                 )
             ],
             [KeyboardButton(text="Obyektivka 📎")]
@@ -146,7 +145,7 @@ def fetch_free_image(query: str) -> io.BytesIO:
     """Загрузка фоновой картинки по ключевому слову"""
     try:
         clean_query = urllib.parse.quote(query[:20])
-        image_url = f"https://picsum.photos/seed/{clean_query}/800/600"
+        image_url = f"[https://picsum.photos/seed/](https://picsum.photos/seed/){clean_query}/800/600"
         req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=5) as resp:
             return io.BytesIO(resp.read())
@@ -161,7 +160,6 @@ async def cmd_start(message: types.Message):
     except Exception:
         pass
 
-    # Регистрируем только если пользователь новый (существующий баланс НЕ сбрасывается)
     register_user(message.from_user.id)
     current_bal = get_user_balance(message.from_user.id)
 
@@ -182,7 +180,7 @@ async def cmd_help(message: types.Message):
     )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="📖 Qo'llanmani ochish", url="https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05")]
+            [InlineKeyboardButton(text="📖 Qo'llanmani ochish", url="[https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05](https://telegra.ph/PDF-maker-bot--PDF-file-qollanmasi-12-05)")]
         ]
     )
     await message.answer(help_text, reply_markup=keyboard, parse_mode="Markdown")
@@ -228,7 +226,7 @@ async def process_card_choice(callback: types.CallbackQuery):
     )
     admin_keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="👨‍💻 Administratorga yozish (@farrux204)", url="https://t.me/farrux204")]
+            [InlineKeyboardButton(text="👨‍💻 Administratorga yozish (@farrux204)", url="[https://t.me/farrux204](https://t.me/farrux204)")]
         ]
     )
     await callback.message.answer(card_info_text, reply_markup=admin_keyboard, parse_mode="Markdown")
@@ -418,7 +416,7 @@ async def handle_incoming_files(message: types.Message):
                 return
             
             waiting_for_edit_file.discard(user.id)
-            webapp_url = "https://farruh707.github.io/ai-presentation-bot/editor.html"
+            webapp_url = "[https://farruh707.github.io/ai-presentation-bot/editor.html](https://farruh707.github.io/ai-presentation-bot/editor.html)"
 
             response_text = (
                 f"✅ **Fayl qabul qilindi!**\n\n"
@@ -535,16 +533,7 @@ async def handle_web_app_data(message: types.Message):
                 config={"response_mime_type": "application/json"}
             )
             
-            clean_text = response.text.strip()
-            if "
-```json" in clean_text:
-                clean_text = clean_text.split("
-```json")[1].split("```")[0].strip()
-            elif "
-```" in clean_text:
-                clean_text = clean_text.split("
-```")[1].split("```")[0].strip()
-                
+            clean_text = response.text.strip().replace("```json", "").replace("```", "").strip()
             parsed_data = json.loads(clean_text)
 
         except Exception as e:

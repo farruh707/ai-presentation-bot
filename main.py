@@ -35,7 +35,6 @@ from aiogram.types import (
     BufferedInputFile
 )
 
-# Импорты для FastAPI веб-сервера
 from fastapi import FastAPI
 import uvicorn
 from threading import Thread
@@ -48,7 +47,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
-# --- НАДЕЖНАЯ БАЗА ДАННЫХ (SQLite) ---
+# --- БАЗА ДАННЫХ (SQLite) ---
 DB_NAME = "bot_database.db"
 
 def init_db():
@@ -88,9 +87,8 @@ def update_user_balance(user_id: int, new_balance: int):
     cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (new_balance, user_id))
     conn.commit()
     conn.close()
-# -------------------------------------
 
-# Настройка FastAPI приложения для Render
+# FastAPI сервер для Render
 app = FastAPI()
 
 @app.get("/")
@@ -144,20 +142,19 @@ async def set_bot_commands(bot: Bot):
     await bot.set_my_commands(commands)
 
 def fetch_free_image(query: str) -> io.BytesIO:
-    """Скачивает бесплатную тематическую картинку"""
+    """Загрузка фоновой картинки по ключевому слову"""
     try:
         clean_query = urllib.parse.quote(query[:20])
         image_url = f"https://picsum.photos/seed/{clean_query}/800/600"
         req = urllib.request.Request(image_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req, timeout=5) as resp:
-            image_bytes = resp.read()
-            return io.BytesIO(image_bytes)
+            return io.BytesIO(resp.read())
     except Exception as e:
         logging.error(f"Image download error: {e}")
         return None
 
 def apply_text_styling(shape, font_size=32, is_title=False):
-    """Применяет шрифт Times New Roman и нужные размеры шрифта"""
+    """Стилизация шрифта Times New Roman"""
     if not shape.has_text_frame:
         return
     for paragraph in shape.text_frame.paragraphs:
@@ -216,7 +213,7 @@ async def cmd_buy(message: types.Message):
         "Taqdimotda yoziladiga ma'lumotlar ikki xil sifatga ega. Ushbu sifatlarga ko'ra bitta taqdimot yaratish narxlari quyidagicha:\n\n"
         "⭐️ **Standart**: 3000 so'm.\n"
         "⭐️⭐️ **Premium**: 5000 so'm.\n"
-        "⭐️⭐️⭐️ **Yuqori sifatli Premium**: 7000 so'm."
+        "⭐️⭐️⭐️ **Yuqori sifatli Premium**: 7000 so me."
     )
     keyboard = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -425,7 +422,6 @@ async def handle_incoming_files(message: types.Message):
                 return
             
             waiting_for_edit_file.discard(user.id)
-            
             webapp_url = "https://farruh707.github.io/ai-presentation-bot/editor.html"
 
             response_text = (
@@ -442,7 +438,6 @@ async def handle_incoming_files(message: types.Message):
                     )]
                 ]
             )
-            
             await message.answer(response_text, reply_markup=webapp_keyboard, parse_mode="Markdown")
         return
 
@@ -504,46 +499,51 @@ async def handle_web_app_data(message: types.Message):
         parsed_data = {}
         try:
             prompt = (
-                f"Siz professional akademik taqdimot yaratuvchisiz. '{topic}' mavzusida {til}da to'liq taqdimot tuzing.\n\n"
-                "Siz quyidagi qat'iy JSON formatini qaytarishingiz SHART:\n"
+                f"Siz professional akademik taqdimot tuzuvchisiz. '{topic}' mavzusida {til}da mukammal va chuqur akademik taqdimot rejasini yarating.\n\n"
+                "QAT'IY QOIDALAR:\n"
+                "1. Reja nomlari umumiylashtirilgan bo'lmasin (Kirish, Asosiy qism deb yozish TAQIQLANADI). "
+                f"Reja nomlari '{topic}' mavzusining ichki mohiyatidan kelib chiqib, ilmiy va aniq nomlanishi shart!\n"
+                "2. Hech qanday belgi, nuqta, tire yoki marsker qo'shmang.\n\n"
+                "JSON FORMATIDA QAYTARING:\n"
                 "{\n"
                 "  \"reja\": [\"1. [Mavzuga mos 1-reja nomi]\", \"2. [Mavzuga mos 2-reja nomi]\", \"3. [Mavzuga mos 3-reja nomi]\"],\n"
-                "  \"xulosa\": \"Mavzu bo'yicha batafsil va ilmiy xulosa matni.\",\n"
-                "  \"adabiyotlar\": [\"1. O'zbekiston ilmiy manbalari 2024\", \"2. Ilmiy adabiyotlar tahlili 2025\"],\n"
+                "  \"xulosa\": \"Mavzu bo'yicha ilmiy xulosa matni.\",\n"
+                "  \"adabiyotlar\": [\"1. Manba 2024\", \"2. Manba 2025\"],\n"
                 "  \"plan_details\": [\n"
                 "    {\n"
                 "      \"plan_title\": \"1. [Mavzuga mos 1-reja nomi]\",\n"
-                "      \"paragraphs\": [\"1-reja bo'yicha juda batafsil va chuqur tahliliy matn 1\", \"Batafsil matn 2\", \"Batafsil matn 3\"],\n"
-                "      \"image_keyword\": \"science research topic\"\n"
+                "      \"paragraphs\": [\"Batafsil matn 1\", \"Batafsil matn 2\"],\n"
+                "      \"image_keyword\": \"science research\"\n"
                 "    },\n"
                 "    {\n"
                 "      \"plan_title\": \"2. [Mavzuga mos 2-reja nomi]\",\n"
-                "      \"paragraphs\": [\"2-reja bo'yicha juda batafsil va chuqur tahliliy matn 1\", \"Batafsil matn 2\", \"Batafsil matn 3\"],\n"
-                "      \"image_keyword\": \"analysis laboratory topic\"\n"
+                "      \"paragraphs\": [\"Batafsil matn 1\", \"Batafsil matn 2\"],\n"
+                "      \"image_keyword\": \"technology analysis\"\n"
                 "    },\n"
                 "    {\n"
                 "      \"plan_title\": \"3. [Mavzuga mos 3-reja nomi]\",\n"
-                "      \"paragraphs\": [\"3-reja bo'yicha juda batafsil va chuqur tahliliy matn 1\", \"Batafsil matn 2\", \"Batafsil matn 3\"],\n"
-                "      \"image_keyword\": \"technology future topic\"\n"
+                "      \"paragraphs\": [\"Batafsil matn 1\", \"Batafsil matn 2\"],\n"
+                "      \"image_keyword\": \"future development\"\n"
                 "    }\n"
                 "  ]\n"
-                "}\n"
-                "DIQQAT: Reja nomlarini sun'iy intellekt '{topic}' mavzusining o'ziga qarab maxsus va aniq qilib o'ylab topishi shart (umumiy so'zlar bo'lmasin)!"
+                "}"
             )
             
             response = ai_client.models.generate_content(
                 model='gemini-2.5-flash',
                 contents=prompt,
-                config={
-                    "response_mime_type": "application/json"
-                }
+                config={"response_mime_type": "application/json"}
             )
             
             clean_text = response.text.strip()
-            if "```json" in clean_text:
-                clean_text = clean_text.split("```json")[1].split("```")[0].strip()
-            elif "```" in clean_text:
-                clean_text = clean_text.split("```")[1].split("```")[0].strip()
+            if "
+```json" in clean_text:
+                clean_text = clean_text.split("
+```json")[1].split("```")[0].strip()
+            elif "
+```" in clean_text:
+                clean_text = clean_text.split("
+```")[1].split("```")[0].strip()
                 
             parsed_data = json.loads(clean_text)
 
@@ -557,83 +557,92 @@ async def handle_web_app_data(message: types.Message):
             prs.slide_width = Inches(13.333)
             prs.slide_height = Inches(7.5)
 
-            # Слайд 1: Титульный
-            slide_layout = prs.slide_layouts[0]
-            slide = prs.slides.add_slide(slide_layout)
+            # --- Слайд 1: Титульный ---
+            blank_layout = prs.slide_layouts[6]
+            slide = prs.slides.add_slide(blank_layout)
             
-            title_shape = slide.shapes.title
-            title_shape.text = topic
-            apply_text_styling(title_shape, font_size=44, is_title=True)
-
-            subtitle_shape = slide.placeholders[1]
-            subtitle_shape.text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
-            apply_text_styling(subtitle_shape, font_size=32)
-
-            # Слайд 2: Название темы вверху, слово "Reja" ровно по центру, без точек
-            slide_layout = prs.slide_layouts[5]
-            slide = prs.slides.add_slide(slide_layout)
-            
-            # 1. Название темы (вверху)
-            t_box = slide.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(11.7), Inches(0.8))
-            tf_t = t_box.text_frame
-            tf_t.word_wrap = True
-            p_t = tf_t.paragraphs[0]
-            p_t.text = topic
-            p_t.font.name = "Times New Roman"
-            p_t.font.size = Pt(36)
-            p_t.font.bold = True
-
-            # 2. Слово "Reja" ровно по центру слайда
-            center_box = slide.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(11.7), Inches(5.5))
-            tf = center_box.text_frame
+            title_box = slide.shapes.add_textbox(Inches(1.0), Inches(2.0), Inches(11.333), Inches(2.0))
+            tf = title_box.text_frame
             tf.word_wrap = True
-            tf.text = ""
+            p = tf.paragraphs[0]
+            p.text = topic
+            p.alignment = PP_ALIGN.CENTER
+            p.font.name = "Times New Roman"
+            p.font.size = Pt(44)
+            p.font.bold = True
 
-            # Заголовок Reja (по центру)
-            p_reja_title = tf.paragraphs[0]
-            p_reja_title.text = "Reja"
-            p_reja_title.alignment = PP_ALIGN.CENTER
-            p_reja_title.font.name = "Times New Roman"
-            p_reja_title.font.size = Pt(36)
-            p_reja_title.font.bold = True
+            sub_box = slide.shapes.add_textbox(Inches(1.0), Inches(4.5), Inches(11.333), Inches(1.5))
+            tf_sub = sub_box.text_frame
+            tf_sub.word_wrap = True
+            p_sub = tf_sub.paragraphs[0]
+            p_sub.text = f"Tayyorladi: {muallif}\nTarif: {tarif.upper()}"
+            p_sub.alignment = PP_ALIGN.CENTER
+            p_sub.font.name = "Times New Roman"
+            p_sub.font.size = Pt(28)
 
-            # Пункты плана (с новой строки, без точек)
-            reja_list = parsed_data.get("reja", ["1. Kirish va dolzarblik", "2. Asosiy tahlil", "3. Yakuniy natijalar"])
-            for r_item in reja_list:
-                p_item = tf.add_paragraph()
-                p_item.text = r_item
+            # --- Слайд 2: План слайд ---
+            slide2 = prs.slides.add_slide(blank_layout)
+            
+            # 1. Название темы (в самом верху)
+            top_box = slide2.shapes.add_textbox(Inches(0.8), Inches(0.4), Inches(11.733), Inches(0.8))
+            tf_top = top_box.text_frame
+            tf_top.word_wrap = True
+            p_top = tf_top.paragraphs[0]
+            p_top.text = topic
+            p_top.alignment = PP_ALIGN.LEFT
+            p_top.font.name = "Times New Roman"
+            p_top.font.size = Pt(28)
+            p_top.font.bold = True
+
+            # 2. Слово REJA (СТРОГО ПО ЦЕНТРУ СЛАЙДА)
+            reja_title_box = slide2.shapes.add_textbox(Inches(0.0), Inches(1.3), Inches(13.333), Inches(0.8))
+            tf_reja = reja_title_box.text_frame
+            p_reja = tf_reja.paragraphs[0]
+            p_reja.text = "Reja"
+            p_reja.alignment = PP_ALIGN.CENTER
+            p_reja.font.name = "Times New Roman"
+            p_reja.font.size = Pt(38)
+            p_reja.font.bold = True
+
+            # 3. Список пунктов плана (БЕЗ точек и маркеров)
+            content_box = slide2.shapes.add_textbox(Inches(1.0), Inches(2.2), Inches(11.333), Inches(4.8))
+            tf_content = content_box.text_frame
+            tf_content.word_wrap = True
+
+            reja_list = parsed_data.get("reja", ["1. Kirish", "2. Tahlil", "3. Natijalar"])
+            for idx, r_item in enumerate(reja_list):
+                p_item = tf_content.paragraphs[0] if idx == 0 else tf_content.add_paragraph()
+                p_item.text = str(r_item)
                 p_item.alignment = PP_ALIGN.LEFT
                 p_item.font.name = "Times New Roman"
-                p_item.font.size = Pt(28)
+                p_item.font.size = Pt(26)
 
-            # Xulosa (с новой строки)
-            p_x_title = tf.add_paragraph()
+            # Xulosa
+            p_x_title = tf_content.add_paragraph()
             p_x_title.text = "\nXulosa:"
             p_x_title.font.name = "Times New Roman"
-            p_x_title.font.size = Pt(30)
+            p_x_title.font.size = Pt(28)
             p_x_title.font.bold = True
 
-            xulosa_text = parsed_data.get("xulosa", "Mavzu bo'yicha ilmiy xulosalar shakllantirildi.")
-            p_x = tf.add_paragraph()
-            p_x.text = xulosa_text
+            p_x = tf_content.add_paragraph()
+            p_x.text = parsed_data.get("xulosa", "Mavzu bo'yicha ilmiy xulosalar shakllantirildi.")
             p_x.font.name = "Times New Roman"
-            p_x.font.size = Pt(24)
+            p_x.font.size = Pt(22)
 
-            # Foydalanilgan adabiyotlar (с новой строки)
-            p_ad_title = tf.add_paragraph()
-            p_ad_title.text = "\nFoydalanilgan adabiyotlar ro'yxati:"
+            # Adabiyotlar
+            p_ad_title = tf_content.add_paragraph()
+            p_ad_title.text = "\nFoydalanilgan adabiyotlar:"
             p_ad_title.font.name = "Times New Roman"
-            p_ad_title.font.size = Pt(30)
+            p_ad_title.font.size = Pt(28)
             p_ad_title.font.bold = True
 
-            adabiyotlar = parsed_data.get("adabiyotlar", ["1. O'zbekiston Respublikasi ilmiy manbalari 2024."])
-            for ad_item in adabiyotlar:
-                p_ad = tf.add_paragraph()
-                p_ad.text = ad_item
+            for ad_item in parsed_data.get("adabiyotlar", ["1. Manba 2024"]):
+                p_ad = tf_content.add_paragraph()
+                p_ad.text = str(ad_item)
                 p_ad.font.name = "Times New Roman"
-                p_ad.font.size = Pt(24)
+                p_ad.font.size = Pt(22)
 
-            # Слайды по каждому пункту плана (с текстом и картинкой)
+            # --- Слайды по содержанию ---
             plan_details = parsed_data.get("plan_details", [])
             for plan_info in plan_details:
                 p_title = plan_info.get("plan_title", "Reja bo'limi")
@@ -646,29 +655,37 @@ async def handle_web_app_data(message: types.Message):
                 for i in range(0, len(paragraphs), chunk_size):
                     chunk = paragraphs[i:i + chunk_size]
                     
-                    slide = prs.slides.add_slide(prs.slide_layouts[5])
+                    slide_item = prs.slides.add_slide(blank_layout)
                     
-                    t_shape = slide.shapes.title
-                    t_shape.text = f"{p_title}"
-                    apply_text_styling(t_shape, font_size=40, is_title=True)
+                    # Заголовок раздела
+                    h_box = slide_item.shapes.add_textbox(Inches(0.8), Inches(0.5), Inches(11.733), Inches(1.0))
+                    tf_h = h_box.text_frame
+                    tf_h.word_wrap = True
+                    p_h = tf_h.paragraphs[0]
+                    p_h.text = p_title
+                    p_h.font.name = "Times New Roman"
+                    p_h.font.size = Pt(36)
+                    p_h.font.bold = True
 
-                    txBox = slide.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(7.3), Inches(5.0))
-                    tf_box = txBox.text_frame
-                    tf_box.word_wrap = True
+                    # Текст без маркеров
+                    tx_box = slide_item.shapes.add_textbox(Inches(0.8), Inches(1.8), Inches(7.0), Inches(5.0))
+                    tf_b = tx_box.text_frame
+                    tf_b.word_wrap = True
 
-                    for para in chunk:
-                        p_elem = tf_box.add_paragraph()
-                        p_elem.text = para
+                    for idx, para in enumerate(chunk):
+                        p_elem = tf_b.paragraphs[0] if idx == 0 else tf_b.add_paragraph()
+                        p_elem.text = str(para)
                         p_elem.font.name = "Times New Roman"
-                        p_elem.font.size = Pt(28)
-                        p_elem.space_after = Pt(10)
+                        p_elem.font.size = Pt(26)
 
+                    # Картинка справа
                     if img_stream:
                         try:
-                            slide.shapes.add_picture(img_stream, Inches(8.3), Inches(1.8), width=Inches(4.4))
+                            slide_item.shapes.add_picture(img_stream, Inches(8.2), Inches(1.8), width=Inches(4.5))
                         except Exception as e:
-                            logging.error(f"Error adding picture to slide: {e}")
+                            logging.error(f"Image insert error: {e}")
 
+            # Сохранение и отправка
             file_stream = io.BytesIO()
             prs.save(file_stream)
             file_stream.seek(0)
@@ -695,7 +712,6 @@ async def handle_other_text(message: types.Message):
 
 async def main():
     logging.basicConfig(level=logging.INFO)
-    
     init_db()
     
     server_thread = Thread(target=run_fastapi, daemon=True)

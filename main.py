@@ -46,7 +46,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 ai_client = genai.Client(api_key=GEMINI_API_KEY)
 
-# --- РАБОТА С БАЗОЙ ДАННЫХ (SQLite) ---
+# --- НАДЕЖНАЯ БАЗА ДАННЫХ (SQLite) ---
 DB_NAME = "bot_database.db"
 
 def init_db():
@@ -61,25 +61,30 @@ def init_db():
     conn.commit()
     conn.close()
 
+def register_user(user_id: int):
+    """Регистрирует пользователя ТОЛЬКО один раз и дает бонус 3000 сум. 
+    Если пользователь уже есть в базе, этот метод ничего не меняет!"""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    # INSERT OR IGNORE не перезапишет существующего пользователя и его баланс
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
+    conn.commit()
+    conn.close()
+
 def get_user_balance(user_id: int) -> int:
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute('SELECT balance FROM users WHERE user_id = ?', (user_id,))
     row = cursor.fetchone()
-    if row is None:
-        # Если пользователя нет в базе, даем начальный бонус 3000 сум
-        cursor.execute('INSERT OR REPLACE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
-        conn.commit()
-        balance = 3000
-    else:
-        balance = row[0]
     conn.close()
-    return balance
+    if row is None:
+        return 3000
+    return row[0]
 
 def update_user_balance(user_id: int, new_balance: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute('INSERT OR REPLACE INTO users (user_id, balance) VALUES (?, ?)', (user_id, new_balance))
+    cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (new_balance, user_id))
     conn.commit()
     conn.close()
 # -------------------------------------
@@ -144,8 +149,8 @@ async def cmd_start(message: types.Message):
     except Exception:
         pass
 
-    # Автоматически регистрируем пользователя в БД и даем бонус при первом входе
-    get_user_balance(message.from_user.id)
+    # Регистрируем пользователя только если он новый. Старый баланс не сбрасывается!
+    register_user(message.from_user.id)
 
     welcome_text = (
         f"Salom **{message.from_user.full_name}**, AI Taqdimot | Slayd | PPT | PDF Bot ga xush kelibsiz\n\n"
@@ -472,7 +477,7 @@ async def handle_web_app_data(message: types.Message):
         muallif = data.get('muallif', 'Farrux')
         til = data.get('til', "O'zbek tili")
         
-        # Списание средств и сохранение в БД
+        # Списание средств
         update_user_balance(user_id, current_balance - cost)
         new_balance = get_user_balance(user_id)
         
@@ -614,7 +619,7 @@ async def main():
     # Сбрасываем старые веб-хуки
     await bot.delete_webhook(drop_pending_updates=True)
     
-    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (Baza ulangan)!")
+    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (Xavfsiz baza ulangan)!")
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 

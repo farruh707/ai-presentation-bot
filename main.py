@@ -63,10 +63,9 @@ def init_db():
 
 def register_user(user_id: int):
     """Регистрирует пользователя ТОЛЬКО один раз и дает бонус 3000 сум. 
-    Если пользователь уже есть в базе, этот метод ничего не меняет!"""
+    Если пользователь уже есть в базе, этот метод ничего не меняет (баланс не сбрасывается)!"""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    # INSERT OR IGNORE не перезапишет существующего пользователя и его баланс
     cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
     conn.commit()
     conn.close()
@@ -78,12 +77,14 @@ def get_user_balance(user_id: int) -> int:
     row = cursor.fetchone()
     conn.close()
     if row is None:
+        register_user(user_id)
         return 3000
     return row[0]
 
 def update_user_balance(user_id: int, new_balance: int):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    cursor.execute('INSERT OR IGNORE INTO users (user_id, balance) VALUES (?, ?)', (user_id, 3000))
     cursor.execute('UPDATE users SET balance = ? WHERE user_id = ?', (new_balance, user_id))
     conn.commit()
     conn.close()
@@ -435,7 +436,7 @@ async def process_admin_decision(callback: types.CallbackQuery):
     new_bal = current_bal + add_amount
     update_user_balance(target_user_id, new_bal)
 
-    await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi.")
+    await bot.send_message(target_user_id, f"🎉 To'lovingiz tasdiqlandi! Balansingizga +{add_amount} so'm qo'shildi. Joriy balans: {new_bal} so'm.")
     await callback.message.edit_caption(caption=callback.message.caption + f"\n\n✅ Tasdiqlandi (+{add_amount} so'm)")
     await callback.answer("Bajarildi!")
 
@@ -619,7 +620,7 @@ async def main():
     # Сбрасываем старые веб-хуки
     await bot.delete_webhook(drop_pending_updates=True)
     
-    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (Xavfsiz baza ulangan)!")
+    print("Bot va FastAPI server muvaffaqiyatli ishga tushdi (To'liq tuzatilgan версия)!")
     await set_bot_commands(bot)
     await dp.start_polling(bot)
 
